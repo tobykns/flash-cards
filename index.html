@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Flashcards (Pro - FSRS v4.5 Visual)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -70,14 +71,14 @@
         
         .group-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* Slightly wider for chart */
             gap: 15px;
         }
         .group-card { 
             background: rgba(255, 255, 255, 0.9); padding: 12px; border-radius: 16px;
             box-shadow: 0 5px 10px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s; 
             border: 2px solid transparent; display: flex; flex-direction: column; justify-content: space-between; 
-            min-height: 130px;
+            min-height: 200px; /* Increased height for chart */
         }
         .group-card:hover { transform: translateY(-5px); border-color: var(--primary); background: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.15); }
 
@@ -90,6 +91,17 @@
         }
         .tool-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
         .tool-btn.danger:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+        /* Mini Chart CSS in Group Card */
+        .mini-chart-container {
+            position: relative;
+            height: 100px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 5px;
+        }
 
         .view { display: none; opacity: 0; transform: scale(0.95); transition: opacity 0.3s, transform 0.3s; }
         .view.active { display: block; opacity: 1; transform: scale(1); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
@@ -125,7 +137,15 @@
             box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4); z-index: 2; position: relative; border: 2px solid white; cursor: pointer; transition: 0.3s;
         }
         .mic-btn:hover { transform: scale(1.05); }
-        .mic-btn.listening { background: linear-gradient(135deg, #ff7675, #d63031); animation: pulseMic 1.5s infinite; }
+        
+        /* Updated Mic Styles for Toggle */
+        .mic-btn.listening { 
+            background: linear-gradient(135deg, #ff7675, #d63031); 
+            animation: pulseMic 1.5s infinite; 
+            box-shadow: 0 0 15px rgba(255, 118, 117, 0.6);
+        }
+        /* Add a "stop" icon/state when listening if desired, but color change is strong enough */
+
         .mic-ring {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%;
             background: rgba(108, 92, 231, 0.2); z-index: 1; opacity: 0;
@@ -232,7 +252,9 @@
                  <button class="btn-outline" onclick="showModal('settings')" title="設定">⚙️</button>
             </div>
         </div>
+        
         <div class="group-grid" id="group-grid-display"></div>
+
         <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
              <button class="btn-outline" onclick="triggerImport()" style="font-size:0.9em;">📂 匯入 (.json)</button>
              <input type="file" id="file-import" style="display: none;" accept=".json" onchange="handleImport(event)">
@@ -407,7 +429,9 @@
     let comboCount = 0;
     let peer = null; let conn = null; let battleDeck = []; let battleIndex = 0; let myHp = 100; let opHp = 100; let isHost = false;
     let recognition = null; 
+    let isRecording = false; // New flag for toggle
     let mySimpleId = '';
+    window.groupCharts = {}; // Store charts for each group
 
     // --- 1. Init ---
     function initApp() { if (!userData.username) userData.username = 'Student'; renderDashboard(); updateGreeting(); }
@@ -464,6 +488,31 @@
         return card.progress[mode];
     }
 
+    // --- Mastery Chart Logic ---
+    function getMasteryData(groupName) {
+        let cards = userData.groups[groupName] || [];
+        let lapses = 0;    // D > 7.5
+        let struggling = 0; // 3.5 < D <= 7.5
+        let easy = 0;       // D <= 3.5
+        const currentMode = userData.settings.studyMode || 'flip';
+
+        cards.forEach(card => {
+            const stats = getCardStats(card, currentMode);
+            const difficulty = stats.d || 5; 
+            if (difficulty > 7.5) { lapses++; } 
+            else if (difficulty > 3.5) { struggling++; } 
+            else { easy++; }
+        });
+        
+        const total = cards.length;
+        return {
+            lapses: { count: lapses, percent: total > 0 ? (lapses / total) * 100 : 0 },
+            struggling: { count: struggling, percent: total > 0 ? (struggling / total) * 100 : 0 },
+            easy: { count: easy, percent: total > 0 ? (easy / total) * 100 : 0 },
+            total: total
+        };
+    }
+
     // --- 2. Dashboard Render ---
     function renderDashboard() {
         const grid = document.getElementById('group-grid-display'); grid.innerHTML = '';
@@ -471,12 +520,20 @@
         const currentMode = userData.settings.studyMode || 'flip';
         document.getElementById('current-mode-display').innerText = modeMap[currentMode];
 
+        // Cleanup old charts
+        Object.keys(window.groupCharts).forEach(key => {
+            if(window.groupCharts[key]) window.groupCharts[key].destroy();
+        });
+        window.groupCharts = {};
+
+        // Generate HTML first
         Object.keys(userData.groups).forEach(groupName => {
             const cards = userData.groups[groupName];
             const cardCount = cards.length;
-            let dueCount = 0; let masteredCount = 0;
+            let dueCount = 0;
             const now = Date.now();
             const retention = userData.settings.fsrs_params.request_retention;
+            const safeGroupName = groupName.replace(/\s+/g, '_'); // Safe ID
 
             cards.forEach(c => {
                 const stats = getCardStats(c, currentMode);
@@ -487,9 +544,8 @@
                     if (r < retention) isDue = true;
                 }
                 if (isDue || retryQueue.find(r=>r.id===c.id)) dueCount++;
-                if (stats.s > 21) masteredCount++; 
             });
-            const progress = cardCount === 0 ? 0 : (masteredCount / cardCount) * 100;
+
             const div = document.createElement('div'); div.className = 'group-card';
             div.innerHTML = `
                 <div class="card-header-row">
@@ -499,27 +555,67 @@
                         <button class="tool-btn danger" onclick="deleteGroup(event, '${groupName}')" title="刪除">✕</button>
                     </div>
                 </div>
-                <div onclick="enterGroup('${groupName}')" style="flex:1; cursor:pointer;">
-                    <div style="font-size:0.85em; color:#666; text-align:left;">
-                        <p style="margin:4px 0;">📚 ${cardCount} 張卡片</p>
-                        <p style="margin:4px 0; font-weight:bold; color: ${dueCount > 0 ? 'var(--danger)' : '#aaa'}">⏰ ${dueCount} 待複習 <span style="font-weight:normal; font-size:0.8em; color:#999;">(${modeMap[currentMode]})</span></p>
+                <div onclick="enterGroup('${groupName}')" style="flex:1; cursor:pointer; width:100%;">
+                    <div class="mini-chart-container">
+                        <canvas id="chart-${safeGroupName}"></canvas>
                     </div>
-                    <div style="width:100%; height:5px; background:#eee; border-radius:3px; margin-top:8px; overflow:hidden;">
-                        <div style="height:100%; width:${progress}%; background:var(--success);"></div>
+                    <div style="font-size:0.85em; color:#666; text-align:center;">
+                        <p style="margin:4px 0; font-weight:bold; color: ${dueCount > 0 ? 'var(--danger)' : '#aaa'}">⏰ ${dueCount} 待複習</p>
                     </div>
                 </div>
-                <button class="btn-duel" onclick="setupHostGame(event, '${groupName}')">⚔️ 連機對戰 (Host)</button>
+                <button class="btn-duel" onclick="setupHostGame(event, '${groupName}')">⚔️ 連機對戰</button>
             `;
             grid.appendChild(div);
         });
+
         const addBtn = document.createElement('div'); addBtn.className = 'group-card add-group-card';
         addBtn.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; cursor:pointer;"><span style="font-size:2em;">+</span><span style="font-weight:bold; font-size:0.9em;">新增群組</span></div>`;
         addBtn.onclick = () => showModal('group');
         grid.appendChild(addBtn);
+
+        // Render Charts after HTML is in DOM
+        Object.keys(userData.groups).forEach(groupName => {
+            const safeGroupName = groupName.replace(/\s+/g, '_');
+            const ctx = document.getElementById(`chart-${safeGroupName}`);
+            if (ctx) {
+                const mastery = getMasteryData(groupName);
+                if (mastery.total === 0) {
+                     // Draw empty gray circle if no cards
+                     window.groupCharts[groupName] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { labels: ['Empty'], datasets: [{ data: [1], backgroundColor: ['#eee'], borderWidth: 0 }] },
+                        options: { events: [], cutout: '70%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+                    });
+                } else {
+                    window.groupCharts[groupName] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['不熟', '普通', '簡單'],
+                            datasets: [{
+                                data: [mastery.lapses.count, mastery.struggling.count, mastery.easy.count],
+                                backgroundColor: ['#ff7675', '#fdcb6e', '#00b894'],
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            cutout: '65%',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                title: { display: true, text: `${mastery.total}張`, position: 'bottom', padding: 0, font: {size: 10, weight: 'normal'} },
+                                tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.raw}張` } }
+                            }
+                        }
+                    });
+                }
+            }
+        });
     }
 
     // --- 3. Navigation ---
-    function goDashboard() { switchView('view-dashboard'); renderDashboard(); if(peer) { peer.destroy(); peer = null; } comboCount = 0; if(recognition) recognition.stop(); }
+    function goDashboard() { switchView('view-dashboard'); renderDashboard(); if(peer) { peer.destroy(); peer = null; } comboCount = 0; if(recognition) { recognition.stop(); isRecording = false; } }
     function switchView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); }
     function enterGroup(gn) { 
         currentGroup = gn; retryQueue = []; comboCount = 0; 
@@ -647,11 +743,11 @@
                 <div class="chinese-meaning" style="margin-bottom:10px;">${studyCard.meaning}</div>
                 <h3 style="color:var(--text-light); margin-bottom:30px;">${studyCard.word}</h3>
                 <div class="mic-container"><div class="mic-btn" id="mic-btn" onclick="toggleSpeech()">🎤</div><div class="mic-ring"></div></div>
-                <div style="font-size:0.9em; color:#999;" id="speak-status">Tap mic to speak</div>
+                <div style="font-size:0.9em; color:#999; font-weight:bold;" id="speak-status">點擊麥克風開始</div>
                 
                 <div class="score-box" id="speak-result">
                     <div id="speak-feedback-title" style="font-weight:bold; font-size:1.2em; margin-bottom:5px;"></div>
-                    <div style="font-size:0.9em; color:#666;">你唸成: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div>
+                    <div style="font-size:0.9em; color:#666;">AI 聽到: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div>
                     <div class="score-bar-bg"><div class="score-bar-fill" id="speak-score-bar"></div></div>
                     <div id="speak-advice" style="font-size:0.85em; color:#888; margin-bottom:10px;"></div>
                     ${sm2ButtonsHtml}
@@ -659,28 +755,83 @@
         }
     }
 
-    // --- Speech Logic ---
+    // --- Speech Logic (Updated for Toggle) ---
     function toggleSpeech() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { alert("瀏覽器不支援語音辨識 (建議使用 Chrome)"); return; }
-        if (recognition && recognition.started) { recognition.stop(); return; }
+        
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRecognition(); recognition.lang = 'en-US'; recognition.interimResults = false; recognition.maxAlternatives = 1;
-        const btn = document.getElementById('mic-btn'); const status = document.getElementById('speak-status');
-        recognition.onstart = () => { recognition.started = true; btn.classList.add('listening'); status.innerText = "Listening..."; };
-        recognition.onend = () => { recognition.started = false; btn.classList.remove('listening'); status.innerText = "Processing..."; };
-        recognition.onresult = (event) => { const transcript = event.results[0][0].transcript.toLowerCase(); evaluatePronunciation(transcript); };
+        const btn = document.getElementById('mic-btn'); 
+        const status = document.getElementById('speak-status');
+
+        if (isRecording) {
+            // Stop recording logic
+            if (recognition) recognition.stop();
+            // isRecording will be set to false in onend
+            return;
+        }
+
+        // Start recording logic
+        recognition = new SpeechRecognition(); 
+        recognition.lang = 'en-US'; 
+        recognition.interimResults = false; 
+        recognition.maxAlternatives = 1;
+        // Do not stop automatically on silence quickly, try to keep open until user clicks stop or browser forces it
+        recognition.continuous = true; 
+
+        recognition.onstart = () => { 
+            isRecording = true; 
+            btn.classList.add('listening'); 
+            status.innerText = "錄音中... (點擊結束)"; 
+            status.style.color = "var(--danger)";
+        };
+        
+        recognition.onend = () => { 
+            isRecording = false; 
+            btn.classList.remove('listening'); 
+            status.innerText = "AI 分析中..."; 
+            status.style.color = "#999";
+        };
+        
+        recognition.onresult = (event) => { 
+            // We only care about results when we stop, but continuous mode might give chunks.
+            // We'll take the latest final result.
+            const len = event.results.length;
+            if (len > 0) {
+                const transcript = event.results[len-1][0].transcript.toLowerCase(); 
+                evaluatePronunciation(transcript); 
+                // Stop after getting a result if we want auto-stop, but user asked for manual.
+                // However, usually we want to evaluate what was said. 
+                // Let's stop recognition once we have a valid result to show score.
+                recognition.stop();
+            }
+        };
+        
         recognition.start();
     }
+
     function evaluatePronunciation(heardText) {
-        const target = studyCard.word.toLowerCase(); heardText = heardText.trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-        const similarity = similarityRatio(target, heardText); const score = Math.round(similarity * 100);
-        const resultBox = document.getElementById('speak-result'); const title = document.getElementById('speak-feedback-title'); const heardEl = document.getElementById('speak-heard'); const bar = document.getElementById('speak-score-bar'); const advice = document.getElementById('speak-advice');
-        resultBox.style.display = 'block'; heardEl.innerText = heardText; bar.style.width = score + '%';
+        const target = studyCard.word.toLowerCase(); 
+        heardText = heardText.trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+        
+        const similarity = similarityRatio(target, heardText); 
+        const score = Math.round(similarity * 100);
+        
+        const resultBox = document.getElementById('speak-result'); 
+        const title = document.getElementById('speak-feedback-title'); 
+        const heardEl = document.getElementById('speak-heard'); 
+        const bar = document.getElementById('speak-score-bar'); 
+        const advice = document.getElementById('speak-advice');
+        
+        resultBox.style.display = 'block'; 
+        heardEl.innerText = heardText; 
+        bar.style.width = score + '%';
+
         if (score >= 100) { title.innerText = "🌟 Excellent! (100%)"; title.style.color = "var(--success)"; advice.innerText = "完美發音！Native speaker level!"; comboCount++; triggerCombo(comboCount); } 
         else if (score >= 80) { title.innerText = "👍 Good Job! (" + score + "%)"; title.style.color = "var(--primary)"; advice.innerText = "發音很標準，繼續保持！"; } 
         else if (score >= 50) { title.innerText = "🤔 Almost... (" + score + "%)"; title.style.color = "var(--warning)"; advice.innerText = `有些音節不太清楚，試著再唸一次 "${studyCard.word}"。`; } 
         else { title.innerText = "💪 Keep Trying (" + score + "%)"; title.style.color = "var(--danger)"; advice.innerText = "沒抓到重點，再試一次？"; }
     }
+    
     function similarityRatio(s1, s2) {
         let longer = s1; let shorter = s2; if (s1.length < s2.length) { longer = s2; shorter = s1; } const longerLength = longer.length; if (longerLength === 0) return 1.0;
         return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
