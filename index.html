@@ -582,14 +582,18 @@
                     <h2 style="color:var(--primary); margin:10px 0;">${studyCard.word}</h2>
                     ${etymHtml}
                     <div class="sentence">${studyCard.sentence}</div>
-                    <button class="btn-primary" onclick="rateCard('good')" style="width:100%; margin-top:10px;">下一題 ➔</button>
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button>
+                        <button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button>
+                        <button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button>
+                    </div>
                 </div>`;
             setTimeout(()=>document.getElementById('user-input').focus(), 100);
             playAudio(studyCard.word);
         }
         // Mode: SPEAK
         else if (currentMode === 'speak') {
-            display.innerHTML = `${retryHtml}<div class="chinese-meaning" style="margin-bottom:10px;">${studyCard.meaning}</div><h3 style="color:var(--text-light); margin-bottom:30px;">${studyCard.word}</h3><div class="mic-container"><div class="mic-btn" id="mic-btn" onclick="toggleSpeech()">🎤</div><div class="mic-ring"></div></div><div style="font-size:0.9em; color:#999;" id="speak-status">Tap mic to speak</div><div class="score-box" id="speak-result"><div id="speak-feedback-title" style="font-weight:bold; font-size:1.2em; margin-bottom:5px;"></div><div style="font-size:0.9em; color:#666;">你唸成: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div><div class="score-bar-bg"><div class="score-bar-fill" id="speak-score-bar"></div></div><div id="speak-advice" style="font-size:0.85em; color:#888; margin-bottom:10px;"></div><div style="display:flex; gap:10px;"><button class="btn-danger" onclick="rateCard('hard')" style="flex:1;">重試</button><button class="btn-success" onclick="rateCard('easy')" style="flex:1;">通過</button></div></div>`;
+            display.innerHTML = `${retryHtml}<div class="chinese-meaning" style="margin-bottom:10px;">${studyCard.meaning}</div><h3 style="color:var(--text-light); margin-bottom:30px;">${studyCard.word}</h3><div class="mic-container"><div class="mic-btn" id="mic-btn" onclick="toggleSpeech()">🎤</div><div class="mic-ring"></div></div><div style="font-size:0.9em; color:#999;" id="speak-status">Tap mic to speak</div><div class="score-box" id="speak-result"><div id="speak-feedback-title" style="font-weight:bold; font-size:1.2em; margin-bottom:5px;"></div><div style="font-size:0.9em; color:#666;">你唸成: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div><div class="score-bar-bg"><div class="score-bar-fill" id="speak-score-bar"></div></div><div id="speak-advice" style="font-size:0.85em; color:#888; margin-bottom:10px;"></div><div style="display:flex; gap:10px; margin-top:15px;"><button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button><button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button><button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button></div></div>`;
         }
     }
 
