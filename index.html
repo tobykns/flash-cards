@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Flashcards (Pro Mode)</title>
+    <title>AI Flashcards (Pro - FSRS v4.5 Visual)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -96,8 +96,6 @@
         @keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
         .nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        
-        /* 置中導覽列 (Center Nav Bar) */
         .nav-bar-center { position: relative; justify-content: center; }
         .nav-bar-center .btn-outline { position: absolute; left: 0; top: 50%; transform: translateY(-50%); }
         .nav-bar-title { font-weight: bold; font-size: 1.2em; text-align: center; }
@@ -138,9 +136,6 @@
         .score-bar-bg { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; margin: 10px 0; }
         .score-bar-fill { height: 100%; background: var(--success); width: 0%; transition: width 1s ease-out; }
         
-        @keyframes pulseMic { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 118, 117, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 118, 117, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 118, 117, 0); } }
-        @keyframes ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2); opacity: 0; } }
-
         .spell-audio-btn {
             width: 70px; height: 70px; border-radius: 50%;
             background: linear-gradient(145deg, #ffffff, #e6e6e6);
@@ -149,6 +144,7 @@
             font-size: 2em; color: var(--primary);
             margin: 0 auto 10px auto;
             display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
         }
         .spell-audio-btn:active { box-shadow: inset 5px 5px 10px #d1d1d1, inset -5px -5px 10px #ffffff; transform: scale(0.98); }
 
@@ -159,40 +155,43 @@
         .health-fill { height: 100%; background: linear-gradient(90deg, #00b894, #00cec9); width: 100%; transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 10px; }
         .health-fill.danger { background: linear-gradient(90deg, #ff7675, #d63031); animation: pulseBar 1s infinite; }
         .avatar { font-size: 2.5em; display: block; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1)); animation: floatAvatar 3s ease-in-out infinite; }
-        @keyframes floatAvatar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        @keyframes pulseBar { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
-
+        
         .danger-zone { margin-top: 40px; padding: 20px; border: 2px dashed rgba(255, 118, 117, 0.5); border-radius: 16px; text-align: center; background: rgba(255, 255, 255, 0.4); }
         .btn-reset-big { background: linear-gradient(135deg, #ff7675, #d63031); color: white; font-weight: bold; font-size: 1.1em; width: 100%; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(214, 48, 49, 0.3); transition: 0.2s; }
         .btn-reset-big:hover { transform: scale(1.02); box-shadow: 0 6px 20px rgba(214, 48, 49, 0.4); }
 
         /* --- Modal & Settings --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        /* Default modal is centered */
-        .modal { background: white; padding: 25px; border-radius: 24px; width: 360px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
-        
-        /* Helper for left-aligned settings */
+        .modal { background: white; padding: 25px; border-radius: 24px; width: 380px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
         .text-left { text-align: left; }
-
-        .settings-section-title { font-weight: bold; color: var(--primary); font-size: 1em; margin: 15px 0 10px 0; display:flex; align-items:center; gap:6px; }
+        .settings-section-title { font-weight: bold; color: var(--primary); font-size: 1em; margin: 15px 0 10px 0; display:flex; align-items:center; gap:6px; border-bottom: 2px solid #f0f0f0; padding-bottom:5px; }
         
         .mode-options { display: flex; gap: 8px; margin-bottom: 25px; }
         .mode-opt { flex: 1; cursor: pointer; position: relative; }
         .mode-opt input { position: absolute; opacity: 0; cursor: pointer; }
-        .mode-label { 
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 8px 4px; border: 2px solid #f0f0f0; border-radius: 12px; 
-            background: #fff; color: #888; transition: 0.2s; height: 100%;
-        }
-        .mode-opt input:checked + .mode-label {
-            border-color: var(--primary); background: #f0edff; color: var(--primary); font-weight: bold;
-            box-shadow: 0 4px 8px rgba(108, 92, 231, 0.15); transform: translateY(-2px);
-        }
+        .mode-label { padding: 8px 4px; border: 2px solid #f0f0f0; border-radius: 12px; background: #fff; color: #888; transition: 0.2s; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .mode-opt input:checked + .mode-label { border-color: var(--primary); background: #f0edff; color: var(--primary); font-weight: bold; box-shadow: 0 4px 8px rgba(108, 92, 231, 0.15); transform: translateY(-2px); }
         .mode-label span { font-size: 1.2em; margin-bottom: 3px; }
         .mode-label div { font-size: 0.75em; }
 
-        .sm2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8f9fa; padding: 15px; border-radius: 15px; border:1px solid #eee; }
+        /* FSRS Visual Grid */
+        .w-grid-container { background: #f9f9f9; border-radius: 12px; padding: 10px; border: 1px solid #eee; margin-bottom: 15px; }
+        .w-group { margin-bottom: 10px; }
+        .w-group-title { font-size: 0.75em; color: #888; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .w-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .w-item { display: flex; flex-direction: column; }
+        .w-item label { font-size: 0.7em; color: #aaa; text-align: center; margin-bottom: 2px; }
+        .w-item input { 
+            width: 100%; border: 1px solid #e0e0e0; border-radius: 6px; 
+            font-size: 0.85em; text-align: center; padding: 4px; 
+            font-family: monospace; background: white; box-sizing: border-box;
+        }
+        .w-item input:focus { border-color: var(--primary); outline: none; background: #f0edff; }
+        
+        .import-area { margin-top: 10px; }
+        .import-area textarea { width: 100%; font-family: monospace; font-size: 0.8em; padding: 8px; border-radius: 8px; border: 1px solid #ddd; resize: vertical; box-sizing: border-box;}
+        
+        .sm2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8f9fa; padding: 15px; border-radius: 15px; border:1px solid #eee; margin-bottom: 15px; }
         .sm2-item { background: white; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; text-align: center; }
         .sm2-item label { display: block; font-size: 0.75em; color: #aaa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
         .sm2-item input { width: 100%; border: none; font-size: 1.3em; font-weight: bold; color: var(--text); text-align: center; background: transparent; padding: 0; font-family: 'Fredoka', sans-serif; }
@@ -207,6 +206,10 @@
         .user-info-group { display: flex; align-items: center; gap: 8px; }
         .action-buttons-group { display: flex; align-items: center; gap: 10px; }
         .mode-badge { font-size: 0.85em; color: var(--text-light); background: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(5px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.8); }
+        
+        @keyframes pulseMic { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 118, 117, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 118, 117, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 118, 117, 0); } }
+        @keyframes ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2); opacity: 0; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
     </style>
 </head>
 <body>
@@ -215,14 +218,12 @@
 <div id="combo-layer"></div>
 
 <div class="container">
-    
     <div id="view-dashboard" class="view active">
         <div class="top-action-bar">
             <div class="user-info-group">
                 <span id="user-greeting" style="font-family:'Fredoka', sans-serif; font-size: 1.5em; font-weight: 600; color: var(--primary); text-shadow: 2px 2px 0px rgba(255,255,255,0.5);">Hi, Student</span>
                 <button class="btn-outline" style="padding: 4px 8px; border-radius: 50%; width:30px; height:30px;" onclick="editUserName()">✎</button>
             </div>
-            
             <div class="action-buttons-group">
                  <div class="mode-badge">
                     模式: <span id="current-mode-display" style="font-weight:bold; color:var(--primary);">翻卡</span>
@@ -231,15 +232,12 @@
                  <button class="btn-outline" onclick="showModal('settings')" title="設定">⚙️</button>
             </div>
         </div>
-
         <div class="group-grid" id="group-grid-display"></div>
-        
         <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
              <button class="btn-outline" onclick="triggerImport()" style="font-size:0.9em;">📂 匯入 (.json)</button>
              <input type="file" id="file-import" style="display: none;" accept=".json" onchange="handleImport(event)">
              <button class="btn-outline" onclick="sendGmailReminder()" style="font-size:0.9em;">📧 Gmail 提醒</button>
         </div>
-        
         <div class="danger-zone">
             <div style="font-size:0.8em; color:var(--danger-dark); margin-bottom:10px; font-weight:bold;">⚠️ 危險操作區</div>
             <button class="btn-reset-big" onclick="factoryReset()">
@@ -255,9 +253,7 @@
             <span id="current-group-name" style="font-weight: 700; color: var(--primary); font-size:1.1em;"></span>
             <button class="btn-outline" onclick="openManager()">📝 管理</button>
         </div>
-        
         <button class="btn-primary btn-block" onclick="toggleMode()" id="mode-btn" style="margin-bottom: 20px; background: linear-gradient(135deg, #a29bfe, #6c5ce7);">✨ AI 智能新增</button>
-
         <div id="mode-study">
             <div style="text-align: center; margin-bottom: 15px; color: var(--text-light); font-size: 0.9em; font-weight: 600;">
                 <span id="study-mode-label" style="background:#e0e0e0; color:#555; padding:2px 8px; border-radius:10px; font-size:0.8em; margin-right:5px;">翻卡</span>
@@ -266,7 +262,6 @@
             </div>
             <div class="card-area" id="card-display"></div>
         </div>
-
         <div id="mode-add" style="display: none;">
             <div class="card-area" style="text-align: left; justify-content: flex-start;">
                 <h3 style="text-align:center; color:var(--primary);">🤖 Gemini 2.5 Flash</h3>
@@ -276,13 +271,10 @@
                     <img id="img-preview" src="" alt="Preview" style="max-height:150px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                     <div style="color:var(--danger); cursor:pointer; font-size:0.9em; margin-top:5px;" onclick="clearImage()">移除圖片</div>
                 </div>
-                
                 <label style="font-weight:bold; font-size:0.9em; color:#666;">API Key</label>
                 <input type="password" id="api-key" placeholder="Paste Gemini Key" style="width:100%; padding:12px; margin:5px 0 15px 0; border:1px solid #ddd; border-radius:10px; box-sizing:border-box;">
-                
                 <label style="font-weight:bold; font-size:0.9em; color:#666;">輸入英文單字</label>
                 <textarea id="words-input" rows="4" placeholder="例如: resilience, epiphany..." style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; font-family:inherit;"></textarea>
-                
                 <button class="btn-primary btn-block" onclick="generateCards()" style="margin-top: 20px;">🚀 生成並審核</button>
                 <div id="loading-msg" style="display:none; text-align:center; color: var(--primary); margin-top:15px; font-weight:bold;">AI 正在分析中...</div>
             </div>
@@ -322,7 +314,6 @@
             <p style="color:#666;">請告知對手以下號碼：</p>
             <div style="background:#f1f2f6; padding:20px; border-radius:15px; margin:20px 0; font-family:monospace; font-size:2.5em; letter-spacing:5px; color:var(--primary); font-weight:bold;" id="host-id-display">...</div>
             <button class="btn-outline" onclick="copyHostId()">📋 複製號碼</button>
-            
             <div id="host-status" style="color: #999; margin-top:20px; font-size:0.9em;">正在連接伺服器...</div>
             <div id="host-actions" style="display:none; margin-top:30px; animation: popIn 0.5s;">
                 <p style="color:var(--success); font-weight:bold; font-size:1.2em;">對手已連接！準備開戰！</p>
@@ -364,14 +355,12 @@
                     <div class="health-track"><div class="health-fill" id="op-hp-bar"></div></div>
                 </div>
             </div>
-            
             <div id="battle-game-area">
                 <div style="font-size:0.8em; color:#999; margin-top:10px; letter-spacing:2px; font-weight:bold;">SPELL FAST!</div>
                 <div class="chinese-meaning" id="battle-meaning" style="font-size:2.2em; margin:15px 0;">...</div>
                 <div class="input-area"><input type="text" id="battle-input" placeholder="Type answer..." autocomplete="off" onkeydown="if(event.key==='Enter') checkBattleAnswer()"></div>
                 <div id="battle-feedback" style="height:25px; font-weight:800; font-size:1.2em;"></div>
             </div>
-
             <div id="battle-result-area" style="display:none;">
                 <h2 id="battle-final-title" style="font-size:3em; margin-bottom:10px;">WIN!</h2>
                 <button class="btn-outline" onclick="goDashboard()">返回首頁</button>
@@ -394,15 +383,25 @@
 </div>
 
 <script>
-    // --- 0. Config ---
+    // --- 0. Config (FSRS v4.5 Full Parameters) ---
+    const DEFAULT_W = [0.40255, 1.18385, 3.173, 15.69105, 7.19605, 0.5345, 1.4604, 0.0046, 1.54575, 0.1192, 1.01925, 1.9395, 0.11, 0.29605, 0.3762, 0.22845, 0.28505, 0.0, 0.0];
+    
     let userData = JSON.parse(localStorage.getItem('anki-single-data')) || { 
         username: 'Student', apiKey: '', groups: {}, 
-        settings: { studyMode: 'flip', sm2_n1: 1, sm2_n2: 6, sm2_start_ef: 2.5, sm2_min_ef: 1.3 }
+        settings: { 
+            studyMode: 'flip', 
+            fsrs_params: {
+                request_retention: 0.9, 
+                maximum_interval: 36500,
+                w: DEFAULT_W
+            }
+        }
     };
-    if(!userData.settings.sm2_n1) userData.settings.sm2_n1 = 1;
-    if(!userData.settings.sm2_n2) userData.settings.sm2_n2 = 6;
-    if(!userData.settings.sm2_start_ef) userData.settings.sm2_start_ef = 2.5;
-    if(!userData.settings.sm2_min_ef) userData.settings.sm2_min_ef = 1.3;
+    if(!userData.settings.fsrs_params) {
+        userData.settings.fsrs_params = {
+            request_retention: 0.9, maximum_interval: 36500, w: DEFAULT_W
+        };
+    }
 
     let currentGroup = null; let modalType = ''; let retryQueue = []; let currentImageBase64 = null; let tempGeneratedCards = []; 
     let comboCount = 0;
@@ -424,16 +423,43 @@
         layer.appendChild(el); if (navigator.vibrate) navigator.vibrate(50); setTimeout(() => el.remove(), 800);
     }
 
-    // --- HELPER: Get Stats for Current Mode ---
+    // --- FSRS v4.5 Algorithm ---
+    const FSRS = {
+        calculate_retrievability: (s, elapsed_days) => Math.pow(1 + 19/81 * elapsed_days / s, -0.5),
+        next_interval: (s, retention) => Math.max(1, Math.round(s * 9 * (1 / retention - 1))),
+        init_ds: (rating) => {
+            const w = userData.settings.fsrs_params.w;
+            const s = w[rating - 1]; 
+            let d = w[4] - (rating - 3) * w[5];
+            d = Math.min(10, Math.max(1, d));
+            return { s: s, d: d };
+        },
+        next_ds: (s, d, r, rating) => {
+            const w = userData.settings.fsrs_params.w;
+            let next_d = d - w[6] * (rating - 3);
+            next_d = w[4] + (next_d - w[4]) * w[7];
+            next_d = Math.min(10, Math.max(1, next_d));
+            let next_s = s;
+            if (rating > 1) { 
+                const hard_penalty = (rating === 2) ? w[15] : 1;
+                const easy_bonus = (rating === 4) ? w[16] : 1;
+                const factor = Math.exp(w[8]) * (11 - d) * Math.pow(s, -w[9]) * (Math.exp(w[10] * (1 - r)) - 1) * hard_penalty * easy_bonus;
+                next_s = s * (1 + factor);
+            } else { 
+                next_s = w[11] * Math.pow(d, -w[12]) * (Math.pow(s + 1, w[13]) - 1) * Math.exp(w[14] * (1 - r));
+            }
+            return { s: next_s, d: next_d };
+        }
+    };
+
+    // --- HELPER: Get Stats ---
     function getCardStats(card, mode) {
         if (!card.progress) card.progress = {};
-        if (!card.progress[mode]) {
-            if (mode === 'flip' && (card.repetitions !== undefined)) {
-                card.progress['flip'] = { repetitions: card.repetitions, interval: card.interval, efactor: card.efactor, nextReview: card.nextReview };
-                delete card.repetitions; delete card.interval; delete card.efactor; delete card.nextReview;
-            } else {
-                card.progress[mode] = { repetitions: 0, interval: 0, efactor: userData.settings.sm2_start_ef, nextReview: 0 };
-            }
+        if (!card.progress[mode]) card.progress[mode] = { s: 0, d: 0, last_review: 0 };
+        if(card.progress[mode].s === undefined && card.progress[mode].interval !== undefined) {
+             card.progress[mode].s = card.progress[mode].interval;
+             card.progress[mode].d = 5.0; 
+             card.progress[mode].last_review = Date.now() - (card.progress[mode].interval * 86400000);
         }
         return card.progress[mode];
     }
@@ -449,10 +475,19 @@
             const cards = userData.groups[groupName];
             const cardCount = cards.length;
             let dueCount = 0; let masteredCount = 0;
+            const now = Date.now();
+            const retention = userData.settings.fsrs_params.request_retention;
+
             cards.forEach(c => {
                 const stats = getCardStats(c, currentMode);
-                if (stats.nextReview <= Date.now() && !retryQueue.find(r=>r.id===c.id)) dueCount++;
-                if (stats.interval > 10) masteredCount++;
+                let isDue = false;
+                if (stats.last_review === 0) { isDue = true; } else {
+                    const elapsed_days = (now - stats.last_review) / 86400000;
+                    const r = FSRS.calculate_retrievability(stats.s, elapsed_days);
+                    if (r < retention) isDue = true;
+                }
+                if (isDue || retryQueue.find(r=>r.id===c.id)) dueCount++;
+                if (stats.s > 21) masteredCount++; 
             });
             const progress = cardCount === 0 ? 0 : (masteredCount / cardCount) * 100;
             const div = document.createElement('div'); div.className = 'group-card';
@@ -492,18 +527,13 @@
         document.getElementById('mode-study').style.display = 'block'; 
         document.getElementById('mode-add').style.display = 'none'; 
         resetModeBtn();
+        if(userData.groups[gn]) userData.groups[gn].sort(() => Math.random() - 0.5);
         renderStudy(); switchView('view-workspace'); 
     }
     
-    // Helper to reset AI button
     function resetModeBtn() {
         const btn = document.getElementById('mode-btn');
-        if(btn) {
-            btn.innerText = '✨ AI 智能新增'; 
-            btn.classList.remove('btn-danger'); 
-            btn.classList.add('btn-primary');
-            btn.style.display = 'block'; 
-        }
+        if(btn) { btn.innerText = '✨ AI 智能新增'; btn.classList.remove('btn-danger'); btn.classList.add('btn-primary'); btn.style.display = 'block'; }
     }
     
     // --- 4. Study Modes ---
@@ -520,6 +550,10 @@
         }
     }
     
+    function playCurrentWordAudio() {
+        if(studyCard && studyCard.word) playAudio(studyCard.word);
+    }
+
     function renderStudy() {
         const cards = userData.groups[currentGroup];
         const currentMode = userData.settings.studyMode || 'flip';
@@ -531,15 +565,33 @@
         }
 
         const now = Date.now();
-        const dueCards = cards.filter(c => getCardStats(c, currentMode).nextReview <= now);
+        const retention = userData.settings.fsrs_params.request_retention;
         
-        if (dueCards.length > 0) { studyCard = dueCards[0]; isRetryMode = false; }
-        else if (retryQueue.length > 0) { studyCard = retryQueue[0]; isRetryMode = true; }
+        let dueCards = cards.filter(c => {
+            const stats = getCardStats(c, currentMode);
+            if(stats.last_review === 0) return !retryQueue.find(r => r.id === c.id); 
+            const elapsed = (now - stats.last_review) / 86400000;
+            const r = FSRS.calculate_retrievability(stats.s, elapsed);
+            return !retryQueue.find(r => r.id === c.id) && r < retention;
+        });
+        
+        // FSRS Scheduling (Sort by lowest R)
+        dueCards.sort((a, b) => {
+            const sA = getCardStats(a, currentMode);
+            const sB = getCardStats(b, currentMode);
+            if (sA.last_review === 0 && sB.last_review !== 0) return -1;
+            if (sA.last_review !== 0 && sB.last_review === 0) return 1;
+            const rA = FSRS.calculate_retrievability(sA.s, (now - sA.last_review)/86400000);
+            const rB = FSRS.calculate_retrievability(sB.s, (now - sB.last_review)/86400000);
+            return rA - rB;
+        });
+
+        if (retryQueue.length > 0) { studyCard = retryQueue[0]; isRetryMode = true; }
+        else if (dueCards.length > 0) { studyCard = dueCards[0]; isRetryMode = false; }
         else {
             const display = document.getElementById('card-display');
             display.innerHTML = `<div style="color: var(--success);"><span style="font-size:4em;">🎉</span><h3>今日目標達成！</h3><p>休息一下吧！</p></div>`;
-            document.getElementById('count-due').innerText = 0;
-            document.getElementById('count-retry').innerText = 0;
+            document.getElementById('count-due').innerText = 0; document.getElementById('count-retry').innerText = 0;
             return;
         }
         document.getElementById('count-due').innerText = dueCards.length;
@@ -551,29 +603,31 @@
         const etymContent = (typeof studyCard.etymology === 'object') ? (studyCard.etymology['zh'] || '') : studyCard.etymology;
         const etymHtml = etymContent ? `<div style="background:#fff3e0; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9em; color:#e67e22;"><b>💡 記憶助手:</b> ${etymContent}</div>` : '';
         
-        // Mode: FLIP
+        const sm2ButtonsHtml = `
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button>
+                <button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button>
+                <button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button>
+            </div>
+        `;
+
         if (currentMode === 'flip') {
             display.innerHTML = `
                 ${retryHtml}
-                <button id="flip-audio-btn" class="spell-audio-btn" style="display:none" onclick="playAudio('${studyCard.word}')">🔊</button>
+                <button id="flip-audio-btn" class="spell-audio-btn" style="display:none" onclick="playCurrentWordAudio()">🔊</button>
                 <div class="chinese-meaning">${studyCard.meaning}</div>
                 <div class="sentence" id="sentence-display">${maskedSentence}</div>
                 <button id="btn-reveal-answer" class="btn-primary" style="width:100%; font-size:1.2em;" onclick="revealAnswer()">👀 顯示答案</button>
                 <div id="answer-section" style="display:none; margin-top:20px;">
                     <h2 style="color:var(--primary); font-size:2.5em; margin:10px 0;">${studyCard.word}</h2>
                     ${etymHtml}
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        <button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button>
-                        <button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button>
-                        <button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button>
-                    </div>
+                    ${sm2ButtonsHtml}
                 </div>`;
         } 
-        // Mode: SPELL
         else if (currentMode === 'spell') {
             display.innerHTML = `
                 ${retryHtml}
-                <button class="spell-audio-btn" onclick="playAudio('${studyCard.word}')">🔊</button>
+                <button class="spell-audio-btn" onclick="playCurrentWordAudio()">🔊</button>
                 <div class="chinese-meaning">${studyCard.meaning}</div>
                 <div class="sentence" style="font-size:0.9em; padding:10px; margin-bottom:15px;">${maskedSentence}</div>
                 <div class="input-area"><input type="text" id="user-input" autocomplete="off" placeholder="Type here..." onkeydown="if(event.key==='Enter') checkAnswer()"></div>
@@ -582,18 +636,26 @@
                     <h2 style="color:var(--primary); margin:10px 0;">${studyCard.word}</h2>
                     ${etymHtml}
                     <div class="sentence">${studyCard.sentence}</div>
-                    <div style="display:flex; gap:10px; margin-top:15px;">
-                        <button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button>
-                        <button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button>
-                        <button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button>
-                    </div>
+                    ${sm2ButtonsHtml}
                 </div>`;
             setTimeout(()=>document.getElementById('user-input').focus(), 100);
-            playAudio(studyCard.word);
+            playCurrentWordAudio();
         }
-        // Mode: SPEAK
         else if (currentMode === 'speak') {
-            display.innerHTML = `${retryHtml}<div class="chinese-meaning" style="margin-bottom:10px;">${studyCard.meaning}</div><h3 style="color:var(--text-light); margin-bottom:30px;">${studyCard.word}</h3><div class="mic-container"><div class="mic-btn" id="mic-btn" onclick="toggleSpeech()">🎤</div><div class="mic-ring"></div></div><div style="font-size:0.9em; color:#999;" id="speak-status">Tap mic to speak</div><div class="score-box" id="speak-result"><div id="speak-feedback-title" style="font-weight:bold; font-size:1.2em; margin-bottom:5px;"></div><div style="font-size:0.9em; color:#666;">你唸成: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div><div class="score-bar-bg"><div class="score-bar-fill" id="speak-score-bar"></div></div><div id="speak-advice" style="font-size:0.85em; color:#888; margin-bottom:10px;"></div><div style="display:flex; gap:10px; margin-top:15px;"><button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button><button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button><button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button></div></div>`;
+            display.innerHTML = `
+                ${retryHtml}
+                <div class="chinese-meaning" style="margin-bottom:10px;">${studyCard.meaning}</div>
+                <h3 style="color:var(--text-light); margin-bottom:30px;">${studyCard.word}</h3>
+                <div class="mic-container"><div class="mic-btn" id="mic-btn" onclick="toggleSpeech()">🎤</div><div class="mic-ring"></div></div>
+                <div style="font-size:0.9em; color:#999;" id="speak-status">Tap mic to speak</div>
+                
+                <div class="score-box" id="speak-result">
+                    <div id="speak-feedback-title" style="font-weight:bold; font-size:1.2em; margin-bottom:5px;"></div>
+                    <div style="font-size:0.9em; color:#666;">你唸成: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div>
+                    <div class="score-bar-bg"><div class="score-bar-fill" id="speak-score-bar"></div></div>
+                    <div id="speak-advice" style="font-size:0.85em; color:#888; margin-bottom:10px;"></div>
+                    ${sm2ButtonsHtml}
+                </div>`;
         }
     }
 
@@ -628,37 +690,65 @@
     }
 
     function revealAnswer() { 
-        // FIX: TARGET SPECIFIC ID to avoid hiding the AI button
         const btn = document.getElementById('btn-reveal-answer');
         if(btn) btn.style.display = 'none'; 
-        
         document.getElementById('answer-section').style.display = 'block'; 
         const audioBtn = document.getElementById('flip-audio-btn');
         if(audioBtn) audioBtn.style.display = 'flex';
-        
         document.getElementById('sentence-display').innerHTML = studyCard.sentence.replace(new RegExp(studyCard.word, 'gi'), `<b>${studyCard.word}</b>`); 
-        playAudio(studyCard.word); 
+        playCurrentWordAudio(); 
     }
     function checkAnswer() {
         const input = document.getElementById('user-input'); const val = input.value.trim().toLowerCase();
-        if (val === studyCard.word.toLowerCase()) { input.classList.add('correct'); comboCount++; triggerCombo(comboCount); playAudio(studyCard.word); } 
+        if (val === studyCard.word.toLowerCase()) { input.classList.add('correct'); comboCount++; triggerCombo(comboCount); playCurrentWordAudio(); } 
         else { input.classList.add('wrong'); comboCount = 0; if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard); }
         input.disabled = true; document.getElementById('check-btn').style.display = 'none'; document.getElementById('answer-section').style.display = 'block';
     }
 
-    // --- SM-2 Core ---
+    // --- FSRS v4.5 Rate Logic ---
     function rateCard(rating) {
-        const now = Date.now(); const s = userData.settings; const currentMode = s.studyMode || 'flip'; const stats = getCardStats(studyCard, currentMode);
-        let q = 0;
-        if (rating === 'hard') { q = 0; stats.repetitions = 0; stats.interval = 1; comboCount = 0; if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard); if (retryQueue.length > 1) retryQueue.push(retryQueue.shift()); stats.nextReview = now; } 
-        else {
-            if (rating === 'good') q = 4; if (rating === 'easy') q = 5;
-            if (stats.repetitions === 0) stats.interval = s.sm2_n1; else if (stats.repetitions === 1) stats.interval = s.sm2_n2; else stats.interval = Math.round(stats.interval * stats.efactor);
-            stats.repetitions += 1; stats.efactor = stats.efactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)); 
-            if (stats.efactor < s.sm2_min_ef) stats.efactor = s.sm2_min_ef; 
-            stats.nextReview = now + (stats.interval * 86400000);
+        const now = Date.now(); 
+        const s = userData.settings; 
+        const currentMode = s.studyMode || 'flip'; 
+        const stats = getCardStats(studyCard, currentMode);
+        
+        let fsrs_rating = 1; 
+        if(rating === 'hard') fsrs_rating = 1; 
+        else if(rating === 'good') fsrs_rating = 3; 
+        else if(rating === 'easy') fsrs_rating = 4;
+
+        let elapsed_days = 0;
+        if (stats.last_review > 0) elapsed_days = (now - stats.last_review) / 86400000;
+
+        let next_s = stats.s;
+        let next_d = stats.d;
+
+        if (stats.s === 0) { 
+            let init = FSRS.init_ds(fsrs_rating);
+            next_s = init.s;
+            next_d = init.d;
+        } else {
+            let r = FSRS.calculate_retrievability(stats.s, elapsed_days);
+            let next_values = FSRS.next_ds(stats.s, stats.d, r, fsrs_rating);
+            next_s = next_values.s;
+            next_d = next_values.d;
         }
-        saveUserData(); renderStudy();
+
+        stats.s = next_s;
+        stats.d = next_d;
+        stats.last_review = now;
+
+        if (fsrs_rating === 1) {
+            // Again -> Add to retryQueue if not there
+            if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard);
+            comboCount = 0;
+        } else {
+            // Success -> Remove from queue
+            retryQueue = retryQueue.filter(c => c.id !== studyCard.id);
+        }
+        
+        saveUserData(); 
+        renderStudy();
     }
 
     // --- 5. Gemini API ---
@@ -815,7 +905,15 @@
     function exportDeck(e, name) { e.stopPropagation(); const data = { groups: {} }; data.groups[name] = userData.groups[name]; const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `anki_${name}.json`; a.click(); }
     function deleteGroup(e, name) { e.stopPropagation(); if (confirm(`刪除群組 ${name}?`)) { delete userData.groups[name]; saveUserData(); renderDashboard(); } }
     function sendGmailReminder() { const subject = "Anki Flashcards Reminder"; const body = "Remember to study your flashcards today!"; window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); }
-    function playAudio(w) { if (!w) return; const audioUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(w)}&type=2`; const audio = new Audio(audioUrl); const p = audio.play(); if (p !== undefined) { p.catch((e) => { speakFallback(w); }); } }
+    function playAudio(w) { 
+        if (!w) return; 
+        const audioUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(w)}&type=2`; 
+        const audio = new Audio(audioUrl); 
+        const p = audio.play(); 
+        if (p !== undefined) { 
+            p.catch((e) => { speakFallback(w); }); 
+        } 
+    }
     function speakFallback(text) { if (!('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 0.9; const voices = window.speechSynthesis.getVoices(); const enVoice = voices.find(v => v.name.includes('Google US')) || voices.find(v => v.lang.includes('en-US')); if (enVoice) u.voice = enVoice; window.speechSynthesis.speak(u); }
     
     function showModal(type) {
@@ -831,6 +929,15 @@
                 </div>`;
         } else if (type === 'settings') {
             const mode = userData.settings.studyMode;
+            const w = userData.settings.fsrs_params.w;
+            
+            // Generate visual grid inputs for W
+            const generateWInput = (index, label) => `
+                <div class="w-item">
+                    <label>${label}</label>
+                    <input type="number" class="w-val" data-idx="${index}" value="${w[index]}" step="0.0001">
+                </div>`;
+
             c.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="margin:0; color:var(--text);">⚙️ 系統設定</h3>
@@ -843,26 +950,119 @@
                         <label class="mode-opt"><input type="radio" name="mode-select" value="spell" ${mode==='spell'?'checked':''}><div class="mode-label"><span>⌨️</span><div>拼字</div></div></label>
                         <label class="mode-opt"><input type="radio" name="mode-select" value="speak" ${mode==='speak'?'checked':''}><div class="mode-label"><span>🎤</span><div>口說</div></div></label>
                     </div>
-                    <div class="settings-section-title">🧠 記憶演算法 (SM-2)</div>
+                    
+                    <div class="settings-section-title">🧠 FSRS 基礎</div>
                     <div class="sm2-grid">
-                        <div class="sm2-item"><label>初次間隔 (天)</label><input type="number" id="set-n1" value="${userData.settings.sm2_n1}" min="0.1" step="0.1"></div>
-                        <div class="sm2-item"><label>二次間隔 (天)</label><input type="number" id="set-n2" value="${userData.settings.sm2_n2}" min="1"></div>
-                        <div class="sm2-item"><label>初始輕鬆度 (EF)</label><input type="number" id="set-ef" value="${userData.settings.sm2_start_ef}" step="0.1"></div>
-                        <div class="sm2-item"><label>最小輕鬆度 (EF)</label><input type="number" id="set-min-ef" value="${userData.settings.sm2_min_ef}" step="0.1"></div>
+                        <div class="sm2-item"><label>目標留存率</label><input type="number" id="set-retention" value="${userData.settings.fsrs_params.request_retention}" min="0.7" max="0.99" step="0.01"></div>
+                        <div class="sm2-item"><label>最大間隔</label><input type="number" id="set-max-ivl" value="${userData.settings.fsrs_params.maximum_interval}" min="1"></div>
+                    </div>
+
+                    <div class="settings-section-title">🎛️ FSRS 權重 (W0-W18)</div>
+                    <div class="w-grid-container">
+                        <div class="w-group">
+                            <div class="w-group-title">初始穩定度 (Initial Stability)</div>
+                            <div class="w-row">
+                                ${generateWInput(0, 'w0:Again')}
+                                ${generateWInput(1, 'w1:Hard')}
+                                ${generateWInput(2, 'w2:Good')}
+                                ${generateWInput(3, 'w3:Easy')}
+                            </div>
+                        </div>
+                        <div class="w-group">
+                            <div class="w-group-title">初始難度 (Initial Difficulty)</div>
+                            <div class="w-row">
+                                ${generateWInput(4, 'w4:Base')}
+                                ${generateWInput(5, 'w5:Scale')}
+                            </div>
+                        </div>
+                        <div class="w-group">
+                            <div class="w-group-title">難度變化 (Difficulty Update)</div>
+                            <div class="w-row">
+                                ${generateWInput(6, 'w6:Decay')}
+                                ${generateWInput(7, 'w7:Revert')}
+                            </div>
+                        </div>
+                        <div class="w-group">
+                            <div class="w-group-title">回憶成功 (Recall Success)</div>
+                            <div class="w-row">
+                                ${generateWInput(8, 'w8')}
+                                ${generateWInput(9, 'w9')}
+                                ${generateWInput(10, 'w10')}
+                                ${generateWInput(15, 'w15(H)')}
+                            </div>
+                            <div class="w-row" style="margin-top:5px;">
+                                ${generateWInput(16, 'w16(E)')}
+                            </div>
+                        </div>
+                        <div class="w-group">
+                            <div class="w-group-title">回憶失敗 (Recall Fail)</div>
+                            <div class="w-row">
+                                ${generateWInput(11, 'w11')}
+                                ${generateWInput(12, 'w12')}
+                                ${generateWInput(13, 'w13')}
+                                ${generateWInput(14, 'w14')}
+                            </div>
+                        </div>
+                        <div class="w-group">
+                            <div class="w-group-title">其他 (Other)</div>
+                            <div class="w-row">
+                                ${generateWInput(17, 'w17')}
+                                ${generateWInput(18, 'w18')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="import-area">
+                        <div style="font-size:0.8em;color:#999;margin-bottom:3px;">快速匯入 (貼上逗號分隔字串):</div>
+                        <textarea id="w-import-area" placeholder="0.4, 1.2, 3.1..." oninput="parseWString(this.value)"></textarea>
                     </div>
                 </div>
-                <button class="btn-primary" style="width:100%; margin-top:20px; font-size:1.1em;" onclick="saveSettings()">💾 儲存設定</button>
+                <button class="btn-primary" style="width:100%; margin-top:15px; font-size:1.1em;" onclick="saveSettings()">💾 儲存設定</button>
             `;
         }
     }
+
+    // Helper to parse pasted string into inputs
+    function parseWString(str) {
+        const arr = str.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        if (arr.length === 19) {
+            const inputs = document.querySelectorAll('.w-val');
+            inputs.forEach((input) => {
+                const idx = parseInt(input.getAttribute('data-idx'));
+                if (idx < arr.length) input.value = arr[idx];
+            });
+        }
+    }
+
     function saveSettings() {
         const radios = document.getElementsByName('mode-select'); let selectedMode = 'flip'; for (const r of radios) { if(r.checked) selectedMode = r.value; }
         userData.settings.studyMode = selectedMode;
-        userData.settings.sm2_n1 = parseFloat(document.getElementById('set-n1').value);
-        userData.settings.sm2_n2 = parseFloat(document.getElementById('set-n2').value);
-        userData.settings.sm2_start_ef = parseFloat(document.getElementById('set-ef').value);
-        userData.settings.sm2_min_ef = parseFloat(document.getElementById('set-min-ef').value);
-        saveUserData(); closeModal(); renderDashboard(); 
+        
+        userData.settings.fsrs_params.request_retention = parseFloat(document.getElementById('set-retention').value);
+        userData.settings.fsrs_params.maximum_interval = parseFloat(document.getElementById('set-max-ivl').value);
+        
+        // Gather W from grid
+        const inputs = document.querySelectorAll('.w-val');
+        const newW = new Array(19).fill(0);
+        let validCount = 0;
+        
+        inputs.forEach(input => {
+            const idx = parseInt(input.getAttribute('data-idx'));
+            const val = parseFloat(input.value);
+            if (!isNaN(val)) {
+                newW[idx] = val;
+                validCount++;
+            }
+        });
+        
+        if (validCount === 19) {
+            userData.settings.fsrs_params.w = newW;
+            saveUserData(); 
+            closeModal(); 
+            renderDashboard();
+        } else {
+            alert('W 參數必須是 19 個有效數字');
+        }
     }
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
     function submitModal() {
