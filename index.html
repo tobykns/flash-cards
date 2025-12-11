@@ -3,678 +3,872 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Flashcards (Custom Settings & Reset)</title>
+    <title>AI Flashcards (Pro Mode)</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6c5ce7;
-            --primary-dark: #5b4cc4;
-            --secondary: #00cec9;
-            --success: #00b894;
-            --warning: #fdcb6e;
-            --danger: #d63031;
-            --bg: #dfe6e9;
-            --card-bg: #fff;
-            --text: #2d3436;
-            --root-text: #e17055;
-            --fire: #ff7675;
+            --primary: #6c5ce7; --primary-dark: #5b4cc4; 
+            --secondary: #00cec9; --accent: #fd79a8;
+            --success: #00b894; --warning: #fdcb6e; --danger: #ff7675; --danger-dark: #d63031;
+            --text: #2d3436; --text-light: #636e72;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
+            font-family: 'Noto Sans TC', 'Fredoka', sans-serif;
+            background: linear-gradient(-45deg, #74b9ff, #a29bfe, #81ecec, #fab1a0);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            margin: 0; padding: 20px;
             color: var(--text);
-            display: flex;
-            justify-content: center;
+            display: flex; justify-content: center;
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        .container { width: 100%; max-width: 600px; position: relative; z-index: 1;}
+        .container { width: 100%; max-width: 550px; position: relative; z-index: 10; padding-bottom: 50px;}
         #confetti-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+        #combo-layer { position: fixed; top: 20%; left: 50%; transform: translateX(-50%); z-index: 2000; pointer-events: none; text-align: center; width: 100%; }
 
-        button { cursor: pointer; border: none; border-radius: 8px; font-family: inherit; transition: transform 0.1s, opacity 0.2s; }
-        button:active { transform: scale(0.98); }
-        .btn-primary { background: var(--primary); color: white; padding: 10px 20px; }
-        .btn-danger { background: var(--danger); color: white; padding: 5px 10px; font-size: 0.8em;}
-        .btn-outline { background: transparent; border: 1px solid var(--text); color: var(--text); padding: 5px 10px; }
-        .btn-gmail { background: #ea4335; color: white; width: 100%; padding: 10px; margin-top: 10px; border-radius: 8px; font-weight: bold;} 
-        .btn-block { width: 100%; padding: 12px; font-size: 1.1em; }
-        .btn-reset { color: #999; background: none; font-size: 0.8em; text-decoration: underline; margin-top: 30px; }
-        .btn-reset:hover { color: var(--danger); }
-        
-        .lang-switch { 
-            position: fixed; bottom: 20px; right: 20px; font-size: 0.9em; z-index: 900;
-            background: rgba(255, 255, 255, 0.9); box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            padding: 10px 15px; border-radius: 30px; font-weight: bold; border: 1px solid #ddd;
+        /* --- Combo --- */
+        .combo-text {
+            font-family: 'Fredoka', sans-serif; font-weight: 800; font-style: italic;
+            position: absolute; width: 100%; left: 0;
+            text-shadow: 3px 3px 0 #fff, 0 0 10px rgba(0,0,0,0.1);
+            animation: comboPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0;
         }
-        .lang-switch:hover { background: white; transform: translateY(-2px); }
+        .combo-small { font-size: 2.5em; color: var(--secondary); }
+        .combo-medium { font-size: 3.5em; color: var(--warning); text-shadow: 3px 3px 0 #fff, 0 0 15px var(--warning); }
+        .combo-large { font-size: 4.5em; color: var(--danger); text-shadow: 4px 4px 0 #fff, 0 0 20px var(--danger); transform: rotate(-10deg); }
+        @keyframes comboPop { 0% { transform: scale(0.5) translateY(50px); opacity: 0; } 50% { transform: scale(1.2) translateY(0); opacity: 1; } 100% { transform: scale(1) translateY(-80px); opacity: 0; } }
 
-        .view { display: none; animation: fadeIn 0.3s; }
-        .view.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* --- UI --- */
+        button { cursor: pointer; border: none; border-radius: 12px; font-family: inherit; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        button:active { transform: scale(0.96); box-shadow: none; }
+        .btn-primary { background: var(--primary); color: white; padding: 12px 20px; box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3); }
+        .btn-success { background: var(--success); color: white; padding: 12px; }
+        .btn-danger { background: var(--danger); color: white; padding: 5px 12px; font-size: 0.85em; border-radius: 20px;}
+        .btn-warning { background: var(--warning); color: #333; padding: 12px; }
+        .btn-outline { background: rgba(255,255,255,0.8); border: 2px solid transparent; color: var(--text); padding: 8px 16px; backdrop-filter: blur(5px); }
+        .btn-outline:hover { background: white; border-color: var(--primary); color: var(--primary); }
+        .btn-block { width: 100%; padding: 14px; font-size: 1.1em; }
+        .btn-duel { 
+            background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; 
+            padding: 6px 10px; border-radius: 8px; font-size: 0.85em; 
+            box-shadow: 0 4px 10px rgba(9, 132, 227, 0.3); width: 100%; margin-top: 8px; 
+        }
+        .btn-ocr { background: linear-gradient(135deg, #fab1a0, #ff7675); color: white; width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 15px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 5px 15px rgba(255, 118, 117, 0.3); }
 
-        .login-card { background: var(--card-bg); padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .user-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; }
-        .user-chip { background: #eee; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 10px; }
-        .user-chip:hover { background: #dcdcdc; }
+        .card-area { background: var(--card-bg); border-radius: 24px; box-shadow: var(--shadow); padding: 30px; text-align: center; min-height: 400px; display: flex; flex-direction: column; justify-content: center; position: relative; border: 1px solid rgba(255,255,255,0.5); backdrop-filter: blur(10px); transition: transform 0.3s; }
         
-        .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-        .streak-container { display: flex; flex-direction: column; align-items: flex-end; cursor: pointer; }
-        .streak-badge { background: #fff; padding: 5px 15px; border-radius: 20px; color: var(--fire); font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 5px; transition: transform 0.2s; }
-        .streak-progress { width: 100%; height: 4px; background: #eee; margin-top: 5px; border-radius: 2px; overflow: hidden; }
-        .streak-bar { height: 100%; background: var(--fire); width: 0%; transition: width 0.5s ease-out; }
+        .group-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .group-card { 
+            background: rgba(255, 255, 255, 0.9); padding: 12px; border-radius: 16px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.05); cursor: pointer; transition: 0.3s; 
+            border: 2px solid transparent; display: flex; flex-direction: column; justify-content: space-between; 
+            min-height: 130px;
+        }
+        .group-card:hover { transform: translateY(-5px); border-color: var(--primary); background: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.15); }
 
-        .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-        .group-card { background: var(--card-bg); padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; position: relative; border: 2px solid transparent; }
-        .group-card:hover { transform: translateY(-3px); border-color: var(--primary); }
-        .card-actions { position: absolute; top: 5px; right: 5px; display: flex; gap: 5px; }
-        .action-icon { background: none; color: #ccc; font-size: 1.1em; padding: 2px; border-radius: 4px; }
-        .action-icon:hover { background: #eee; color: var(--text); }
-        .del-icon:hover { color: var(--danger); background: #fee; }
+        .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .card-title-text { font-size: 1.1em; color: var(--primary); margin: 0; font-weight: bold; word-break: break-word; flex: 1; text-align: left; line-height: 1.2;}
+        .card-tools { display: flex; gap: 4px; flex-shrink: 0; margin-left: 5px; }
+        .tool-btn { 
+            width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; 
+            font-size: 0.9em; background: #fff; border: 1px solid #eee; color: #555; transition: 0.2s;
+        }
+        .tool-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+        .tool-btn.danger:hover { background: var(--danger); color: white; border-color: var(--danger); }
 
-        .add-group-card { border: 2px dashed #ccc; background: none; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #888; }
+        .view { display: none; opacity: 0; transform: scale(0.95); transition: opacity 0.3s, transform 0.3s; }
+        .view.active { display: block; opacity: 1; transform: scale(1); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        .nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        /* 置中導覽列 (Center Nav Bar) */
+        .nav-bar-center { position: relative; justify-content: center; }
+        .nav-bar-center .btn-outline { position: absolute; left: 0; top: 50%; transform: translateY(-50%); }
+        .nav-bar-title { font-weight: bold; font-size: 1.2em; text-align: center; }
+
+        .chinese-meaning { font-size: 2em; font-weight: 700; color: var(--text); margin: 25px 0; letter-spacing: 1px; }
+        .sentence { background: rgba(108, 92, 231, 0.05); padding: 20px; border-left: 5px solid var(--primary); border-radius: 8px; margin-bottom: 25px; color: var(--text-light); font-style: italic; line-height: 1.6; text-align: left; }
+        
+        .input-area { display: flex; justify-content: center; margin: 15px 0; }
+        .input-area input { 
+            width: 80%; max-width: 320px;
+            padding: 12px 20px; margin: 0; 
+            border: 2px solid #dfe6e9; border-radius: 50px; 
+            font-size: 1.4em; text-align: center; font-weight: bold; 
+            color: var(--primary); background: #fdfdfd; 
+            transition: all 0.3s; letter-spacing: 2px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);
+        }
+        .input-area input:focus { border-color: var(--primary); background: white; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.15); outline: none; width: 90%; }
+        .input-area input.correct { border-color: var(--success); background-color: #e8f8f5; color: var(--success); }
+        .input-area input.wrong { border-color: var(--danger); background-color: #ffecec; color: var(--danger); animation: shake 0.4s; }
+
+        .mic-container { position: relative; width: 80px; height: 80px; margin: 0 auto 20px auto; }
+        .mic-btn {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: white; font-size: 2.5em; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4); z-index: 2; position: relative; border: 2px solid white; cursor: pointer; transition: 0.3s;
+        }
+        .mic-btn:hover { transform: scale(1.05); }
+        .mic-btn.listening { background: linear-gradient(135deg, #ff7675, #d63031); animation: pulseMic 1.5s infinite; }
+        .mic-ring {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%;
+            background: rgba(108, 92, 231, 0.2); z-index: 1; opacity: 0;
+        }
+        .mic-btn.listening + .mic-ring { animation: ripple 1.5s infinite; }
+        
+        .score-box { margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 12px; border: 1px solid #eee; display: none; animation: popIn 0.3s; }
+        .score-bar-bg { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; margin: 10px 0; }
+        .score-bar-fill { height: 100%; background: var(--success); width: 0%; transition: width 1s ease-out; }
+        
+        @keyframes pulseMic { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 118, 117, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 118, 117, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 118, 117, 0); } }
+        @keyframes ripple { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2); opacity: 0; } }
+
+        .spell-audio-btn {
+            width: 70px; height: 70px; border-radius: 50%;
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            border: 1px solid #fff;
+            box-shadow: 5px 5px 15px #d1d1d1, -5px -5px 15px #ffffff;
+            font-size: 2em; color: var(--primary);
+            margin: 0 auto 10px auto;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .spell-audio-btn:active { box-shadow: inset 5px 5px 10px #d1d1d1, inset -5px -5px 10px #ffffff; transform: scale(0.98); }
+
+        .battle-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; }
+        .health-bar-container { width: 42%; }
+        .health-bar-container.opponent { text-align: right; }
+        .health-track { width: 100%; height: 12px; background: #dfe6e9; margin-top: 8px; border-radius: 10px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .health-fill { height: 100%; background: linear-gradient(90deg, #00b894, #00cec9); width: 100%; transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 10px; }
+        .health-fill.danger { background: linear-gradient(90deg, #ff7675, #d63031); animation: pulseBar 1s infinite; }
+        .avatar { font-size: 2.5em; display: block; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1)); animation: floatAvatar 3s ease-in-out infinite; }
+        @keyframes floatAvatar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        @keyframes pulseBar { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+        .danger-zone { margin-top: 40px; padding: 20px; border: 2px dashed rgba(255, 118, 117, 0.5); border-radius: 16px; text-align: center; background: rgba(255, 255, 255, 0.4); }
+        .btn-reset-big { background: linear-gradient(135deg, #ff7675, #d63031); color: white; font-weight: bold; font-size: 1.1em; width: 100%; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(214, 48, 49, 0.3); transition: 0.2s; }
+        .btn-reset-big:hover { transform: scale(1.02); box-shadow: 0 6px 20px rgba(214, 48, 49, 0.4); }
+
+        /* --- Modal & Settings --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        /* Default modal is centered */
+        .modal { background: white; padding: 25px; border-radius: 24px; width: 360px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;}
+        
+        /* Helper for left-aligned settings */
+        .text-left { text-align: left; }
+
+        .settings-section-title { font-weight: bold; color: var(--primary); font-size: 1em; margin: 15px 0 10px 0; display:flex; align-items:center; gap:6px; }
+        
+        .mode-options { display: flex; gap: 8px; margin-bottom: 25px; }
+        .mode-opt { flex: 1; cursor: pointer; position: relative; }
+        .mode-opt input { position: absolute; opacity: 0; cursor: pointer; }
+        .mode-label { 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 8px 4px; border: 2px solid #f0f0f0; border-radius: 12px; 
+            background: #fff; color: #888; transition: 0.2s; height: 100%;
+        }
+        .mode-opt input:checked + .mode-label {
+            border-color: var(--primary); background: #f0edff; color: var(--primary); font-weight: bold;
+            box-shadow: 0 4px 8px rgba(108, 92, 231, 0.15); transform: translateY(-2px);
+        }
+        .mode-label span { font-size: 1.2em; margin-bottom: 3px; }
+        .mode-label div { font-size: 0.75em; }
+
+        .sm2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8f9fa; padding: 15px; border-radius: 15px; border:1px solid #eee; }
+        .sm2-item { background: white; padding: 10px; border-radius: 10px; border: 1px solid #e0e0e0; text-align: center; }
+        .sm2-item label { display: block; font-size: 0.75em; color: #aaa; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sm2-item input { width: 100%; border: none; font-size: 1.3em; font-weight: bold; color: var(--text); text-align: center; background: transparent; padding: 0; font-family: 'Fredoka', sans-serif; }
+        .sm2-item input:focus { outline: none; color: var(--primary); }
+
+        .add-group-card { border: 2px dashed #b2bec3; background: transparent; color: #b2bec3; }
         .add-group-card:hover { border-color: var(--primary); color: var(--primary); background: rgba(108, 92, 231, 0.05); }
-        .import-btn-area { margin-top: 15px; text-align: center; }
+        #join-id-input { width: 80%; max-width: 260px; margin: 0 auto 20px auto; display: block; padding: 15px; font-size: 1.2em; text-align: center; letter-spacing: 1px; border: 2px solid #e0e0e0; border-radius: 12px; background: #f8f9fa; }
+        #join-id-input:focus { border-color: var(--primary); background: white; }
         
-        .card-area { background: var(--card-bg); border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 30px; text-align: center; min-height: 350px; display: flex; flex-direction: column; justify-content: center; position: relative; }
-        .nav-bar { background: white; padding: 10px; border-radius: 10px; display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
-        .chinese-meaning { font-size: 1.6em; font-weight: bold; color: var(--text); margin: 20px 0; }
-        .sentence { background: #f8f9fa; padding: 15px; border-left: 4px solid var(--primary); border-radius: 4px; margin-bottom: 25px; color: #555; font-style: italic; line-height: 1.5; }
-        .etymology-box { background: #fff3e0; border: 1px solid #ffe0b2; color: var(--root-text); padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.95em; display: inline-block; max-width: 90%; }
-        .retry-tag { background: var(--danger); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; margin-bottom: 10px; display: inline-block; animation: pulse 2s infinite; }
-        .audio-btn { background: white; border: 2px solid var(--primary); color: var(--primary); border-radius: 50%; width: 50px; height: 50px; cursor: pointer; font-size: 1.4em; margin: 0 auto 20px auto; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
-        .audio-btn.playing { animation: pulse 1s infinite; }
-        .input-area input, .settings-area input, .settings-area textarea, .modal input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
-        .input-area input.correct { border-color: var(--success); background-color: #e8f8f5; }
-        .input-area input.wrong { border-color: var(--danger); background-color: #fdeaea; }
-        .rating-btns { display: flex; gap: 10px; margin-top: 20px; }
-        .rating-btns button { flex: 1; padding: 12px; font-weight: bold; color: white; }
-        .btn-hard { background: var(--danger); }
-        .btn-good { background: var(--warning); color: #333 !important; }
-        .btn-easy { background: var(--success); }
-        
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal { background: white; padding: 25px; border-radius: 15px; width: 300px; text-align: center; position: relative;}
-        
-        #celebration-modal h2 { color: var(--primary); margin-top: 0; }
-        #celebration-modal .emoji { font-size: 4em; display: block; margin: 10px 0; animation: bounce 1s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-
+        .top-action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 5px 0; }
+        .user-info-group { display: flex; align-items: center; gap: 8px; }
+        .action-buttons-group { display: flex; align-items: center; gap: 10px; }
+        .mode-badge { font-size: 0.85em; color: var(--text-light); background: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(5px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.8); }
     </style>
 </head>
 <body>
 
 <canvas id="confetti-canvas"></canvas>
-<button class="lang-switch" onclick="toggleLanguage()">🌐 中/En</button>
+<div id="combo-layer"></div>
 
 <div class="container">
     
-    <div id="view-login" class="view active">
-        <div class="login-card">
-            <h1 style="color: var(--primary);" data-i18n="app_title">👩‍🏫 多用戶單字卡</h1>
-            <p data-i18n="select_user">請選擇使用者</p>
-            <div class="user-list" id="user-list-display"></div>
-            <button class="btn-outline" onclick="showModal('user')" data-i18n="add_user">+ 新增使用者</button>
-            <br>
-            <button class="btn-reset" onclick="factoryReset()">⚠️ 回復初始設定 (Reset App)</button>
-        </div>
-    </div>
-
-    <div id="view-dashboard" class="view">
-        <div class="dashboard-header">
-            <div>
-                <span id="welcome-msg" style="font-weight: bold; font-size: 1.2em;"></span>
-                <div style="font-size: 0.8em; color: #666;" data-i18n="select_group">請選擇要練習的群組</div>
-                <button class="btn-outline" style="font-size:0.8em; margin-top:5px;" onclick="showModal('settings')">⚙️ 設定 (Settings)</button>
+    <div id="view-dashboard" class="view active">
+        <div class="top-action-bar">
+            <div class="user-info-group">
+                <span id="user-greeting" style="font-family:'Fredoka', sans-serif; font-size: 1.5em; font-weight: 600; color: var(--primary); text-shadow: 2px 2px 0px rgba(255,255,255,0.5);">Hi, Student</span>
+                <button class="btn-outline" style="padding: 4px 8px; border-radius: 50%; width:30px; height:30px;" onclick="editUserName()">✎</button>
             </div>
             
-            <div class="streak-container" onclick="editGoal()">
-                <div class="streak-badge">🔥 <span id="streak-count">0</span> / <span id="streak-goal-display">7</span> <span data-i18n="days">Days</span></div>
-                <div class="streak-progress"><div class="streak-bar" id="streak-bar"></div></div>
-                <div style="font-size:0.7em; color:#999; margin-top:2px;" data-i18n="tap_edit">點擊修改目標</div>
+            <div class="action-buttons-group">
+                 <div class="mode-badge">
+                    模式: <span id="current-mode-display" style="font-weight:bold; color:var(--primary);">翻卡</span>
+                 </div>
+                 <button class="btn-outline" onclick="openJoinLobby()" title="加入對戰">⚔️</button>
+                 <button class="btn-outline" onclick="showModal('settings')" title="設定">⚙️</button>
             </div>
         </div>
-        
+
         <div class="group-grid" id="group-grid-display"></div>
-
-        <div class="import-btn-area">
-             <button class="btn-outline" onclick="triggerImport()">📂 <span data-i18n="btn_import">匯入牌組 (.json)</span></button>
+        
+        <div style="margin-top: 30px; display: flex; gap: 10px; justify-content: center;">
+             <button class="btn-outline" onclick="triggerImport()" style="font-size:0.9em;">📂 匯入 (.json)</button>
              <input type="file" id="file-import" style="display: none;" accept=".json" onchange="handleImport(event)">
+             <button class="btn-outline" onclick="sendGmailReminder()" style="font-size:0.9em;">📧 Gmail 提醒</button>
         </div>
-
-        <button class="btn-gmail" onclick="sendGmailReminder()">📧 <span data-i18n="btn_email">設定 Gmail 學習提醒</span></button>
-        <button class="btn-outline" onclick="logout()" data-i18n="logout" style="margin-top:10px; width:100%;">登出</button>
+        
+        <div class="danger-zone">
+            <div style="font-size:0.8em; color:var(--danger-dark); margin-bottom:10px; font-weight:bold;">⚠️ 危險操作區</div>
+            <button class="btn-reset-big" onclick="factoryReset()">
+                <span>🗑️ 清除所有資料 (Reset)</span>
+            </button>
+            <div style="font-size:0.75em; color:#888; margin-top:8px;">此操作無法復原，請謹慎使用</div>
+        </div>
     </div>
 
     <div id="view-workspace" class="view">
         <div class="nav-bar">
-            <button class="btn-outline" onclick="goDashboard()" data-i18n="back_dashboard">← 回列表</button>
-            <span id="current-group-name" style="font-weight: bold; color: var(--primary);"></span>
-            <button class="btn-primary" onclick="toggleMode()" id="mode-btn" data-i18n="btn_ai_add">AI 新增</button>
+            <button class="btn-outline" onclick="goDashboard()">← 返回</button>
+            <span id="current-group-name" style="font-weight: 700; color: var(--primary); font-size:1.1em;"></span>
+            <button class="btn-outline" onclick="openManager()">📝 管理</button>
         </div>
+        
+        <button class="btn-primary btn-block" onclick="toggleMode()" id="mode-btn" style="margin-bottom: 20px; background: linear-gradient(135deg, #a29bfe, #6c5ce7);">✨ AI 智能新增</button>
 
         <div id="mode-study">
-            <div style="text-align: center; margin-bottom: 10px; color: #666; font-size: 0.9em;">
-                <span data-i18n="stat_due">待複習</span>: <span id="count-due" style="font-weight: bold;">0</span> | 
-                <span data-i18n="stat_retry">重試</span>: <span id="count-retry" style="color:var(--danger); font-weight:bold;">0</span>
+            <div style="text-align: center; margin-bottom: 15px; color: var(--text-light); font-size: 0.9em; font-weight: 600;">
+                <span id="study-mode-label" style="background:#e0e0e0; color:#555; padding:2px 8px; border-radius:10px; font-size:0.8em; margin-right:5px;">翻卡</span>
+                待複習: <span id="count-due" style="color:var(--primary);">0</span> &nbsp;|&nbsp; 
+                錯誤: <span id="count-retry" style="color:var(--danger);">0</span>
             </div>
             <div class="card-area" id="card-display"></div>
         </div>
 
         <div id="mode-add" style="display: none;">
-            <div class="card-area" style="text-align: left;">
-                <h3>🤖 Gemini 2.5 Auto-Gen</h3>
-                <label>API Key</label>
-                <input type="password" id="api-key" placeholder="Paste API Key here">
-                <label data-i18n="input_label">輸入英文單字</label>
-                <textarea id="words-input" rows="5" placeholder="e.g., resilience, ubiquitous"></textarea>
-                <button class="btn-primary btn-block" onclick="generateCards()" style="margin-top: 15px;" data-i18n="btn_generate">生成並加入</button>
-                <div id="loading-msg" style="display:none; text-align:center; color: var(--primary); margin-top:10px;" data-i18n="loading">分析中...</div>
+            <div class="card-area" style="text-align: left; justify-content: flex-start;">
+                <h3 style="text-align:center; color:var(--primary);">🤖 Gemini 2.5 Flash</h3>
+                <button class="btn-ocr" id="btn-upload-img" onclick="triggerImageUpload()">📸 拍照 / 掃描單字</button>
+                <input type="file" id="img-input" style="display:none;" accept="image/*" onchange="handleImageSelect(event)">
+                <div id="img-preview-container" style="display:none; text-align:center; margin:10px 0;">
+                    <img id="img-preview" src="" alt="Preview" style="max-height:150px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <div style="color:var(--danger); cursor:pointer; font-size:0.9em; margin-top:5px;" onclick="clearImage()">移除圖片</div>
+                </div>
+                
+                <label style="font-weight:bold; font-size:0.9em; color:#666;">API Key</label>
+                <input type="password" id="api-key" placeholder="Paste Gemini Key" style="width:100%; padding:12px; margin:5px 0 15px 0; border:1px solid #ddd; border-radius:10px; box-sizing:border-box;">
+                
+                <label style="font-weight:bold; font-size:0.9em; color:#666;">輸入英文單字</label>
+                <textarea id="words-input" rows="4" placeholder="例如: resilience, epiphany..." style="width:100%; padding:12px; border:1px solid #ddd; border-radius:10px; box-sizing:border-box; font-family:inherit;"></textarea>
+                
+                <button class="btn-primary btn-block" onclick="generateCards()" style="margin-top: 20px;">🚀 生成並審核</button>
+                <div id="loading-msg" style="display:none; text-align:center; color: var(--primary); margin-top:15px; font-weight:bold;">AI 正在分析中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-review" class="view">
+        <div class="nav-bar"><span style="font-weight: bold;">🧐 審核 AI 單字</span></div>
+        <div class="card-area" style="text-align: left; padding: 20px; display:block; overflow:visible;">
+            <p style="font-size:0.9em; color:#666; text-align:center;">確認無誤後點擊匯入</p>
+            <div id="review-list" style="max-height:400px; overflow-y:auto; padding-right:5px;"></div>
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button class="btn-outline" style="flex:1" onclick="cancelReview()">取消</button>
+                <button class="btn-success" style="flex:2" onclick="confirmImport()">✅ 確認匯入</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-manage" class="view">
+        <div class="nav-bar">
+            <button class="btn-outline" onclick="backToStudy()">← 返回</button>
+            <span style="font-weight: bold;">📝 單字列表</span>
+            <div style="width:50px;"></div>
+        </div>
+        <div class="card-area" style="text-align: left; padding: 20px; display:block;">
+             <div id="manage-list" style="max-height:500px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <div id="view-host-lobby" class="view">
+        <div class="nav-bar nav-bar-center">
+            <button class="btn-outline" onclick="goDashboard()">← 返回</button>
+            <span class="nav-bar-title">⚔️ 建立房間</span>
+        </div>
+        <div class="card-area">
+            <h3>等待挑戰者...</h3>
+            <p style="color:#666;">請告知對手以下號碼：</p>
+            <div style="background:#f1f2f6; padding:20px; border-radius:15px; margin:20px 0; font-family:monospace; font-size:2.5em; letter-spacing:5px; color:var(--primary); font-weight:bold;" id="host-id-display">...</div>
+            <button class="btn-outline" onclick="copyHostId()">📋 複製號碼</button>
+            
+            <div id="host-status" style="color: #999; margin-top:20px; font-size:0.9em;">正在連接伺服器...</div>
+            <div id="host-actions" style="display:none; margin-top:30px; animation: popIn 0.5s;">
+                <p style="color:var(--success); font-weight:bold; font-size:1.2em;">對手已連接！準備開戰！</p>
+                <button class="btn-primary btn-block" onclick="hostStartGame()" style="background: linear-gradient(45deg, #00b894, #00cec9);">🚀 開始對戰</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-join-lobby" class="view">
+        <div class="nav-bar nav-bar-center">
+            <button class="btn-outline" onclick="goDashboard()">← 取消</button>
+            <span class="nav-bar-title">⚔️ 加入房間</span>
+        </div>
+        <div class="card-area">
+            <h3>輸入 6 位數房間號碼</h3>
+            <input type="number" id="join-id-input" placeholder="例如: 123456" autocomplete="off" style="font-size: 1.5em; letter-spacing: 2px;">
+            <button class="btn-primary btn-block" id="btn-connect" onclick="joinGame()">🔗 連線</button>
+            <div id="join-status" style="margin-top:20px; color:#888; font-weight:bold;"></div>
+        </div>
+    </div>
+
+    <div id="view-online-battle" class="view">
+        <div class="nav-bar">
+            <button class="btn-danger" onclick="quitOnlineGame()">🏳️ 投降</button>
+            <span style="font-weight: 800; color: var(--danger); letter-spacing:1px;">⚔️ LIVE BATTLE</span>
+            <div style="width: 50px;"></div> 
+        </div>
+        <div class="card-area" style="border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);">
+            <div class="battle-header">
+                <div class="health-bar-container">
+                    <span class="avatar">🦸‍♂️</span>
+                    <div style="font-weight:bold; color:var(--primary); font-size:0.9em;">YOU</div>
+                    <div class="health-track"><div class="health-fill" id="my-hp-bar"></div></div>
+                </div>
+                <div style="font-weight:900; font-size:2.5em; color:#dfe6e9; font-style:italic;">VS</div>
+                <div class="health-bar-container opponent">
+                    <span class="avatar">🦹</span>
+                    <div style="font-weight:bold; color:var(--danger); font-size:0.9em;">RIVAL</div>
+                    <div class="health-track"><div class="health-fill" id="op-hp-bar"></div></div>
+                </div>
+            </div>
+            
+            <div id="battle-game-area">
+                <div style="font-size:0.8em; color:#999; margin-top:10px; letter-spacing:2px; font-weight:bold;">SPELL FAST!</div>
+                <div class="chinese-meaning" id="battle-meaning" style="font-size:2.2em; margin:15px 0;">...</div>
+                <div class="input-area"><input type="text" id="battle-input" placeholder="Type answer..." autocomplete="off" onkeydown="if(event.key==='Enter') checkBattleAnswer()"></div>
+                <div id="battle-feedback" style="height:25px; font-weight:800; font-size:1.2em;"></div>
+            </div>
+
+            <div id="battle-result-area" style="display:none;">
+                <h2 id="battle-final-title" style="font-size:3em; margin-bottom:10px;">WIN!</h2>
+                <button class="btn-outline" onclick="goDashboard()">返回首頁</button>
             </div>
         </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
-    <div class="modal" id="modal-content">
-        </div>
+    <div class="modal" id="modal-content"></div>
 </div>
 
-<div class="modal-overlay" id="celebration-overlay" style="z-index: 1100;">
+<div class="modal-overlay" id="celebration-overlay" style="z-index: 2500;">
     <div class="modal" id="celebration-modal">
-        <span class="emoji">🎉</span>
-        <h2 data-i18n="congrats_title">目標達成！</h2>
-        <p data-i18n="congrats_msg">恭喜你達到連續學習目標！</p>
-        <p style="font-size: 1.5em; font-weight: bold; color: var(--fire); margin: 10px 0;"><span id="cel-streak">7</span> <span data-i18n="days">Days</span></p>
-        <button class="btn-primary" onclick="closeCelebration()" style="width:100%;">Keep Going! 🚀</button>
+        <span style="font-size:4em;">🎉</span>
+        <h2 id="cel-title">恭喜！</h2>
+        <p id="cel-msg"></p>
+        <button class="btn-primary" onclick="closeCelebration()" style="width:100%;">Awesome!</button>
     </div>
 </div>
 
 <script>
-    // --- 0. i18n ---
-    const translations = {
-        'zh': {
-            'app_title': '👩‍🏫 多用戶單字卡', 'select_user': '請選擇使用者', 'add_user': '+ 新增使用者',
-            'select_group': '選擇群組', 'logout': '登出', 'back_dashboard': '← 回列表',
-            'btn_ai_add': 'AI 新增單字', 'btn_study': '回到學習', 'stat_due': '一般複習', 'stat_retry': '錯誤重試',
-            'input_label': '輸入英文單字 (逗號或換行)', 'btn_generate': '生成並加入', 'loading': 'AI 正在分析字首字尾...',
-            'cancel': '取消', 'confirm': '確定', 'hint_listening': '聽力與拼寫練習', 'submit_ans': '提交答案',
-            'rate_hard': '困難 / 答錯 (列入重試)', 'rate_good': '還好 (1天)', 'rate_easy': '簡單 (3天)',
-            'empty_group': '群組是空的', 'empty_desc': '點擊右上角新增單字！', 'finished_title': '🎉 回合結束！',
-            'finished_desc': '做得好！所有單字都已複習完畢。', 'new_group_label': '新群組', 'cards_unit': '張卡片', 'due_unit': '待複習',
-            'etymology_label': '🧩 記憶助手', 'days': '天', 'retry_tag': '↺ 再次嘗試', 'btn_email': '開啟 Gmail 寄信提醒自己',
-            'email_hint': '這將開啟郵件草稿，請按下傳送以鼓勵自己！',
-            'email_subject': '【自我提醒】該背單字了！🔥',
-            'email_body': '親愛的我：\n\n別忘了今天也要上線背單字！\n你目前已經連續學習了 {streak} 天。\n\n堅持下去，積少成多！',
-            'btn_import': '匯入牌組 (.json)', 'import_success': '成功匯入群組: ', 'import_error': '檔案格式錯誤',
-            'tap_edit': '點擊修改目標', 'edit_goal_title': '設定連勝目標', 'congrats_title': '目標達成！', 'congrats_msg': '太棒了！你已經達到了你的目標！',
-            'settings_title': '複習間隔設定', 'label_good': 'Good (還好) 倍率', 'label_easy': 'Easy (簡單) 倍率', 'reset_warn': '警告：此操作將刪除所有資料且無法復原。確定嗎？'
-        },
-        'en': {
-            'app_title': '👩‍🏫 Flashcards App', 'select_user': 'Select User', 'add_user': '+ Add User',
-            'select_group': 'Select Deck', 'logout': 'Logout', 'back_dashboard': '← Back',
-            'btn_ai_add': 'AI Add Cards', 'btn_study': 'Back to Study', 'stat_due': 'Review', 'stat_retry': 'Retry Queue',
-            'input_label': 'Enter Words', 'btn_generate': 'Generate', 'loading': 'AI Analyzing...',
-            'cancel': 'Cancel', 'confirm': 'Confirm', 'hint_listening': 'Listening & Spelling', 'submit_ans': 'Check Answer',
-            'rate_hard': 'Hard / Wrong (Retry Later)', 'rate_good': 'Good (1d)', 'rate_easy': 'Easy (3d)',
-            'empty_group': 'Deck Empty', 'empty_desc': 'Add words to start!', 'finished_title': '🎉 Session Complete!',
-            'finished_desc': 'Great job! You finished all cards.', 'new_group_label': 'New Deck', 'cards_unit': 'Cards', 'due_unit': 'Due',
-            'etymology_label': '🧩 Memory Aid', 'days': 'Days', 'retry_tag': '↺ Retry Mode', 'btn_email': 'Open Gmail Reminder',
-            'email_hint': 'This opens a draft. Send it to yourself for motivation!',
-            'email_subject': '[Reminder] Time to study! 🔥',
-            'email_body': 'Dear me,\n\nDon\'t forget to study your flashcards today!\nYou represent a {streak} day streak.\n\nKeep going!',
-            'btn_import': 'Import Deck (.json)', 'import_success': 'Imported Deck: ', 'import_error': 'Invalid File Format',
-            'tap_edit': 'Tap to edit goal', 'edit_goal_title': 'Set Streak Goal', 'congrats_title': 'Goal Reached!', 'congrats_msg': 'Amazing! You hit your streak goal!',
-            'settings_title': 'Algorithm Settings', 'label_good': 'Good Multiplier', 'label_easy': 'Easy Multiplier', 'reset_warn': 'WARNING: This will delete ALL data. Irreversible. Are you sure?'
-        }
+    // --- 0. Config ---
+    let userData = JSON.parse(localStorage.getItem('anki-single-data')) || { 
+        username: 'Student', apiKey: '', groups: {}, 
+        settings: { studyMode: 'flip', sm2_n1: 1, sm2_n2: 6, sm2_start_ef: 2.5, sm2_min_ef: 1.3 }
     };
+    if(!userData.settings.sm2_n1) userData.settings.sm2_n1 = 1;
+    if(!userData.settings.sm2_n2) userData.settings.sm2_n2 = 6;
+    if(!userData.settings.sm2_start_ef) userData.settings.sm2_start_ef = 2.5;
+    if(!userData.settings.sm2_min_ef) userData.settings.sm2_min_ef = 1.3;
 
-    let currentLang = localStorage.getItem('anki-lang') || 'zh';
+    let currentGroup = null; let modalType = ''; let retryQueue = []; let currentImageBase64 = null; let tempGeneratedCards = []; 
+    let comboCount = 0;
+    let peer = null; let conn = null; let battleDeck = []; let battleIndex = 0; let myHp = 100; let opHp = 100; let isHost = false;
+    let recognition = null; 
+    let mySimpleId = '';
 
-    function updateLanguage() {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if (translations[currentLang][key]) el.innerText = translations[currentLang][key];
-        });
-        const modeBtn = document.getElementById('mode-btn');
-        if(modeBtn) {
-             const isAdding = document.getElementById('mode-add').style.display === 'block';
-             modeBtn.innerText = isAdding ? translations[currentLang]['btn_study'] : translations[currentLang]['btn_ai_add'];
-        }
+    // --- 1. Init ---
+    function initApp() { if (!userData.username) userData.username = 'Student'; renderDashboard(); updateGreeting(); }
+    function updateGreeting() { document.getElementById('user-greeting').innerText = 'Hi, ' + userData.username; }
+    function editUserName() { const newName = prompt("請輸入你的名字：", userData.username); if (newName && newName.trim() !== "") { userData.username = newName.trim(); saveUserData(); updateGreeting(); } }
+    function factoryReset() { if(confirm("警告：這將刪除所有單字卡和設定，且無法復原。\n\n確定要清除所有資料嗎？")) { localStorage.removeItem('anki-single-data'); location.reload(); } }
+    function saveUserData() { localStorage.setItem('anki-single-data', JSON.stringify(userData)); }
+
+    // --- COMBO SYSTEM ---
+    function triggerCombo(count) {
+        if (count < 2) return; const layer = document.getElementById('combo-layer'); const el = document.createElement('div'); el.className = 'combo-text';
+        if (count < 5) { el.innerText = `${count} Combo!`; el.classList.add('combo-small'); } else if (count < 10) { el.innerText = `Super! ${count}`; el.classList.add('combo-medium'); } else { el.innerText = `MAX COMBO ${count} 🔥`; el.classList.add('combo-large'); }
+        layer.appendChild(el); if (navigator.vibrate) navigator.vibrate(50); setTimeout(() => el.remove(), 800);
     }
 
-    function toggleLanguage() {
-        currentLang = currentLang === 'zh' ? 'en' : 'zh';
-        localStorage.setItem('anki-lang', currentLang);
-        updateLanguage();
-        if(document.getElementById('view-dashboard').classList.contains('active')) renderDashboard();
-        if(document.getElementById('view-workspace').classList.contains('active')) renderStudy();
-    }
-
-    // --- 1. Data Structure ---
-    let users = JSON.parse(localStorage.getItem('anki-users-list')) || [];
-    let currentUser = null;
-    let currentGroup = null;
-    let userData = null;
-    let modalType = ''; 
-    let retryQueue = []; 
-
-    // --- 2. Login & Streak ---
-    function initLogin() {
-        switchView('view-login');
-        const list = document.getElementById('user-list-display');
-        list.innerHTML = '';
-        users.forEach(user => {
-            const div = document.createElement('div');
-            div.className = 'user-chip';
-            div.innerHTML = `<span onclick="login('${user}')">${user}</span><span class="del-user" onclick="deleteUser('${user}')">✕</span>`;
-            list.appendChild(div);
-        });
-        updateLanguage();
-    }
-
-    function factoryReset() {
-        const t = translations[currentLang];
-        if(confirm(t.reset_warn)) {
-            if(confirm("Final check: ALL DATA will be lost.")) {
-                localStorage.clear();
-                location.reload();
-            }
-        }
-    }
-
-    function login(username) {
-        currentUser = username;
-        // Check for settings object
-        userData = JSON.parse(localStorage.getItem(`anki-data-${username}`)) || { apiKey: '', groups: {}, streak: 0, streakGoal: 7, lastLogin: null, settings: { goodMult: 2, easyMult: 3 } };
-        // Ensure settings exist if migrating from old version
-        if (!userData.settings) userData.settings = { goodMult: 2, easyMult: 3 };
-
-        const justHitGoal = checkStreak(); 
-        document.getElementById('welcome-msg').innerText = (currentLang === 'zh' ? '嗨，' : 'Hi, ') + currentUser;
-        document.getElementById('api-key').value = userData.apiKey || '';
-        retryQueue = [];
-        renderDashboard();
-        switchView('view-dashboard');
-        if (justHitGoal) triggerCelebration();
-    }
-
-    function checkStreak() {
-        const today = new Date().toDateString();
-        const lastLogin = userData.lastLogin;
-        let goalReached = false;
-        if (lastLogin !== today) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            if (lastLogin === yesterday.toDateString()) {
-                userData.streak += 1;
+    // --- HELPER: Get Stats for Current Mode ---
+    function getCardStats(card, mode) {
+        if (!card.progress) card.progress = {};
+        if (!card.progress[mode]) {
+            if (mode === 'flip' && (card.repetitions !== undefined)) {
+                card.progress['flip'] = { repetitions: card.repetitions, interval: card.interval, efactor: card.efactor, nextReview: card.nextReview };
+                delete card.repetitions; delete card.interval; delete card.efactor; delete card.nextReview;
             } else {
-                userData.streak = 1;
+                card.progress[mode] = { repetitions: 0, interval: 0, efactor: userData.settings.sm2_start_ef, nextReview: 0 };
             }
-            if (userData.streak === (userData.streakGoal || 7)) goalReached = true;
-            userData.lastLogin = today;
-            saveUserData();
         }
-        return goalReached;
+        return card.progress[mode];
     }
 
-    function logout() { currentUser = null; userData = null; retryQueue = []; initLogin(); }
-
-    function deleteUser(username) {
-        if(confirm(`Delete ${username}?`)) {
-            users = users.filter(u => u !== username);
-            localStorage.setItem('anki-users-list', JSON.stringify(users));
-            localStorage.removeItem(`anki-data-${username}`);
-            initLogin();
-        }
-    }
-    
-    // --- 2.5 UI & Modals ---
-    function editGoal() {
-        const t = translations[currentLang];
-        const newGoal = prompt(t.edit_goal_title, userData.streakGoal || 7);
-        if (newGoal && !isNaN(newGoal) && newGoal > 0) {
-            userData.streakGoal = parseInt(newGoal);
-            saveUserData();
-            renderDashboard();
-        }
-    }
-
-    function triggerCelebration() {
-        const overlay = document.getElementById('celebration-overlay');
-        document.getElementById('cel-streak').innerText = userData.streak;
-        overlay.style.display = 'flex';
-        fireConfetti();
-    }
-    function closeCelebration() { document.getElementById('celebration-overlay').style.display = 'none'; }
-    function fireConfetti() {
-        const canvas = document.getElementById('confetti-canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-        const pieces = []; const colors = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f'];
-        for(let i=0; i<300; i++) pieces.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height-canvas.height, w: Math.random()*10+5, h: Math.random()*10+5, c: colors[Math.floor(Math.random()*colors.length)], d: Math.random()*5+2, a: Math.random()*Math.PI*2});
-        let animationId;
-        function draw() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            pieces.forEach(p => {
-                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
-                p.y += p.d; p.a += 0.1; if(p.y > canvas.height) p.y = -20;
-            });
-            animationId = requestAnimationFrame(draw);
-        }
-        draw();
-        setTimeout(() => { cancelAnimationFrame(animationId); ctx.clearRect(0,0,canvas.width,canvas.height); }, 5000);
-    }
-
-    // --- 3. Dashboard ---
+    // --- 2. Dashboard Render ---
     function renderDashboard() {
-        const grid = document.getElementById('group-grid-display');
-        grid.innerHTML = '';
-        const t = translations[currentLang];
-        
-        document.getElementById('streak-count').innerText = userData.streak;
-        const goal = userData.streakGoal || 7;
-        document.getElementById('streak-goal-display').innerText = goal;
-        const percentage = Math.min(100, (userData.streak / goal) * 100);
-        document.getElementById('streak-bar').style.width = percentage + '%';
+        const grid = document.getElementById('group-grid-display'); grid.innerHTML = '';
+        const modeMap = { 'flip': '翻卡', 'spell': '拼字', 'speak': '口說' };
+        const currentMode = userData.settings.studyMode || 'flip';
+        document.getElementById('current-mode-display').innerText = modeMap[currentMode];
 
         Object.keys(userData.groups).forEach(groupName => {
-            const cardCount = userData.groups[groupName].length;
-            const dueCount = userData.groups[groupName].filter(c => c.nextReview <= Date.now() && !retryQueue.find(r=>r.id===c.id)).length;
-            const div = document.createElement('div');
-            div.className = 'group-card';
+            const cards = userData.groups[groupName];
+            const cardCount = cards.length;
+            let dueCount = 0; let masteredCount = 0;
+            cards.forEach(c => {
+                const stats = getCardStats(c, currentMode);
+                if (stats.nextReview <= Date.now() && !retryQueue.find(r=>r.id===c.id)) dueCount++;
+                if (stats.interval > 10) masteredCount++;
+            });
+            const progress = cardCount === 0 ? 0 : (masteredCount / cardCount) * 100;
+            const div = document.createElement('div'); div.className = 'group-card';
             div.innerHTML = `
-                <div class="card-actions">
-                    <button class="action-icon" title="Export JSON" onclick="exportDeck(event, '${groupName}')">⬇️</button>
-                    <button class="action-icon del-icon" title="Delete" onclick="deleteGroup(event, '${groupName}')">×</button>
+                <div class="card-header-row">
+                    <div class="card-title-text" onclick="enterGroup('${groupName}')" style="cursor:pointer;">${groupName}</div>
+                    <div class="card-tools">
+                        <button class="tool-btn" onclick="exportDeck(event, '${groupName}')" title="匯出">⬇️</button>
+                        <button class="tool-btn danger" onclick="deleteGroup(event, '${groupName}')" title="刪除">✕</button>
+                    </div>
                 </div>
-                <div onclick="enterGroup('${groupName}')">
-                    <h3>${groupName}</h3>
-                    <p>${cardCount} ${t.cards_unit}</p>
-                    <p style="color: ${dueCount > 0 ? 'var(--danger)' : '#aaa'}">${dueCount} ${t.due_unit}</p>
+                <div onclick="enterGroup('${groupName}')" style="flex:1; cursor:pointer;">
+                    <div style="font-size:0.85em; color:#666; text-align:left;">
+                        <p style="margin:4px 0;">📚 ${cardCount} 張卡片</p>
+                        <p style="margin:4px 0; font-weight:bold; color: ${dueCount > 0 ? 'var(--danger)' : '#aaa'}">⏰ ${dueCount} 待複習 <span style="font-weight:normal; font-size:0.8em; color:#999;">(${modeMap[currentMode]})</span></p>
+                    </div>
+                    <div style="width:100%; height:5px; background:#eee; border-radius:3px; margin-top:8px; overflow:hidden;">
+                        <div style="height:100%; width:${progress}%; background:var(--success);"></div>
+                    </div>
                 </div>
+                <button class="btn-duel" onclick="setupHostGame(event, '${groupName}')">⚔️ 連機對戰 (Host)</button>
             `;
             grid.appendChild(div);
         });
-
-        const addBtn = document.createElement('div');
-        addBtn.className = 'group-card add-group-card';
-        addBtn.innerHTML = `<span style="font-size:2em;">+</span><span>${t.new_group_label}</span>`;
+        const addBtn = document.createElement('div'); addBtn.className = 'group-card add-group-card';
+        addBtn.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; cursor:pointer;"><span style="font-size:2em;">+</span><span style="font-weight:bold; font-size:0.9em;">新增群組</span></div>`;
         addBtn.onclick = () => showModal('group');
         grid.appendChild(addBtn);
-        updateLanguage();
+    }
+
+    // --- 3. Navigation ---
+    function goDashboard() { switchView('view-dashboard'); renderDashboard(); if(peer) { peer.destroy(); peer = null; } comboCount = 0; if(recognition) recognition.stop(); }
+    function switchView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+    function enterGroup(gn) { 
+        currentGroup = gn; retryQueue = []; comboCount = 0; 
+        document.getElementById('current-group-name').innerText = gn; 
+        document.getElementById('mode-study').style.display = 'block'; 
+        document.getElementById('mode-add').style.display = 'none'; 
+        resetModeBtn();
+        renderStudy(); switchView('view-workspace'); 
     }
     
-    function exportDeck(e, groupName) {
-        e.stopPropagation();
-        const deckData = userData.groups[groupName];
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(deckData));
-        const dlAnchorElem = document.createElement('a');
-        dlAnchorElem.setAttribute("href", dataStr);
-        dlAnchorElem.setAttribute("download", `${groupName}.json`);
-        document.body.appendChild(dlAnchorElem); dlAnchorElem.click(); dlAnchorElem.remove();
+    // Helper to reset AI button
+    function resetModeBtn() {
+        const btn = document.getElementById('mode-btn');
+        if(btn) {
+            btn.innerText = '✨ AI 智能新增'; 
+            btn.classList.remove('btn-danger'); 
+            btn.classList.add('btn-primary');
+            btn.style.display = 'block'; 
+        }
     }
-
-    function triggerImport() { document.getElementById('file-import').click(); }
-
-    function handleImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const content = JSON.parse(e.target.result);
-                if (!Array.isArray(content)) throw new Error("Invalid");
-                let deckName = file.name.replace(/\.json$/i, '');
-                const newName = prompt(currentLang==='zh' ? "請輸入新群組名稱" : "Name for new deck", deckName);
-                if (!newName) return;
-                if (userData.groups[newName]) { alert("Exists"); return; }
-                userData.groups[newName] = content;
-                saveUserData(); renderDashboard();
-            } catch (err) { alert(translations[currentLang].import_error); }
-        };
-        reader.readAsText(file); event.target.value = '';
-    }
-
-    function sendGmailReminder() {
-        const t = translations[currentLang];
-        const subject = encodeURIComponent(t.email_subject);
-        const body = encodeURIComponent(t.email_body.replace('{streak}', userData.streak));
-        window.open(`mailto:?subject=${subject}&body=${body}`);
-    }
-
-    function enterGroup(groupName) {
-        currentGroup = groupName; retryQueue = [];
-        document.getElementById('current-group-name').innerText = groupName;
-        document.getElementById('mode-study').style.display = 'block';
-        document.getElementById('mode-add').style.display = 'none';
-        renderStudy(); switchView('view-workspace'); updateLanguage();
-    }
-
-    function deleteGroup(e, groupName) {
-        e.stopPropagation();
-        if(confirm(`Delete group "${groupName}"?`)) { delete userData.groups[groupName]; saveUserData(); renderDashboard(); }
-    }
-
-    function goDashboard() { switchView('view-dashboard'); renderDashboard(); }
-
-    // --- 4. Study Logic ---
-    let studyCard = null;
-    let isRetryMode = false;
-
-    function renderStudy() {
-        const t = translations[currentLang];
-        const cards = userData.groups[currentGroup] || [];
-        
-        // Late Retry Logic: Prioritize normal due cards
-        const dueCards = cards.filter(c => c.nextReview <= Date.now() && !retryQueue.find(r => r.id === c.id)).sort((a,b) => a.nextReview - b.nextReview);
-
-        if (dueCards.length > 0) {
-            studyCard = dueCards[0]; isRetryMode = false;
-        } else if (retryQueue.length > 0) {
-            studyCard = retryQueue[0]; isRetryMode = true;
+    
+    // --- 4. Study Modes ---
+    let studyCard = null; let isRetryMode = false;
+    function toggleMode() {
+        const modeDiv = document.getElementById('mode-study');
+        const addDiv = document.getElementById('mode-add');
+        const btn = document.getElementById('mode-btn');
+        if (modeDiv.style.display !== 'none') {
+            modeDiv.style.display = 'none'; addDiv.style.display = 'block'; btn.innerText = '← 返回學習'; btn.classList.remove('btn-primary'); btn.classList.add('btn-danger');
         } else {
-            const display = document.getElementById('card-display');
-            if (cards.length === 0) display.innerHTML = `<div style="color: #999;"><h3>${t.empty_group}</h3><p>${t.empty_desc}</p></div>`;
-            else display.innerHTML = `<div style="color: var(--success);"><h3>${t.finished_title}</h3><p>${t.finished_desc}</p></div>`;
-            document.getElementById('count-due').innerText = 0; document.getElementById('count-retry').innerText = 0;
+            modeDiv.style.display = 'block'; addDiv.style.display = 'none'; btn.innerText = '✨ AI 智能新增'; btn.classList.remove('btn-danger'); btn.classList.add('btn-primary');
+            renderStudy();
+        }
+    }
+    
+    function renderStudy() {
+        const cards = userData.groups[currentGroup];
+        const currentMode = userData.settings.studyMode || 'flip';
+        document.getElementById('study-mode-label').innerText = (currentMode==='spell'?'拼字':(currentMode==='speak'?'口說':'翻卡'));
+
+        if (!cards || cards.length === 0) {
+            document.getElementById('card-display').innerHTML = `<div style="color: #999;"><h3>📭 這裡是空的</h3><p>點擊上方 AI 按鈕新增單字！</p></div>`;
             return;
         }
 
-        const currentDueCount = cards.filter(c => c.nextReview <= Date.now() && !retryQueue.find(r => r.id === c.id)).length;
-        document.getElementById('count-due').innerText = currentDueCount;
+        const now = Date.now();
+        const dueCards = cards.filter(c => getCardStats(c, currentMode).nextReview <= now);
+        
+        if (dueCards.length > 0) { studyCard = dueCards[0]; isRetryMode = false; }
+        else if (retryQueue.length > 0) { studyCard = retryQueue[0]; isRetryMode = true; }
+        else {
+            const display = document.getElementById('card-display');
+            display.innerHTML = `<div style="color: var(--success);"><span style="font-size:4em;">🎉</span><h3>今日目標達成！</h3><p>休息一下吧！</p></div>`;
+            document.getElementById('count-due').innerText = 0;
+            document.getElementById('count-retry').innerText = 0;
+            return;
+        }
+        document.getElementById('count-due').innerText = dueCards.length;
         document.getElementById('count-retry').innerText = retryQueue.length;
-
+        
         const display = document.getElementById('card-display');
-        const escapedWord = studyCard.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedWord, 'gi');
-        const maskedSentence = studyCard.sentence.replace(regex, '<span style="border-bottom: 2px solid #ccc; padding: 0 10px;">_______</span>');
+        const maskedSentence = studyCard.sentence.replace(new RegExp(studyCard.word, 'gi'), '_______');
+        const retryHtml = isRetryMode ? `<div style="background:var(--danger); color:white; padding:5px 15px; border-radius:20px; font-size:0.8em; display:inline-block; margin-bottom:10px;">↺ 錯題重練</div>` : '';
+        const etymContent = (typeof studyCard.etymology === 'object') ? (studyCard.etymology['zh'] || '') : studyCard.etymology;
+        const etymHtml = etymContent ? `<div style="background:#fff3e0; padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9em; color:#e67e22;"><b>💡 記憶助手:</b> ${etymContent}</div>` : '';
         
-        let etymContent = '';
-        if (studyCard.etymology) {
-            etymContent = (typeof studyCard.etymology === 'object') ? (studyCard.etymology[currentLang] || studyCard.etymology['en'] || '') : studyCard.etymology;
+        // Mode: FLIP
+        if (currentMode === 'flip') {
+            display.innerHTML = `
+                ${retryHtml}
+                <button id="flip-audio-btn" class="spell-audio-btn" style="display:none" onclick="playAudio('${studyCard.word}')">🔊</button>
+                <div class="chinese-meaning">${studyCard.meaning}</div>
+                <div class="sentence" id="sentence-display">${maskedSentence}</div>
+                <button id="btn-reveal-answer" class="btn-primary" style="width:100%; font-size:1.2em;" onclick="revealAnswer()">👀 顯示答案</button>
+                <div id="answer-section" style="display:none; margin-top:20px;">
+                    <h2 style="color:var(--primary); font-size:2.5em; margin:10px 0;">${studyCard.word}</h2>
+                    ${etymHtml}
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button class="btn-danger" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('hard')">🔴 不熟 (Fail)</button>
+                        <button class="btn-warning" style="flex:1; background:var(--warning); color:#333; padding:15px; border-radius:12px;" onclick="rateCard('good')">🟡 普通 (Pass)</button>
+                        <button class="btn-success" style="flex:1; padding:15px; border-radius:12px;" onclick="rateCard('easy')">🟢 簡單 (Easy)</button>
+                    </div>
+                </div>`;
+        } 
+        // Mode: SPELL
+        else if (currentMode === 'spell') {
+            display.innerHTML = `
+                ${retryHtml}
+                <button class="spell-audio-btn" onclick="playAudio('${studyCard.word}')">🔊</button>
+                <div class="chinese-meaning">${studyCard.meaning}</div>
+                <div class="sentence" style="font-size:0.9em; padding:10px; margin-bottom:15px;">${maskedSentence}</div>
+                <div class="input-area"><input type="text" id="user-input" autocomplete="off" placeholder="Type here..." onkeydown="if(event.key==='Enter') checkAnswer()"></div>
+                <button id="check-btn" class="btn-primary" onclick="checkAnswer()">送出</button>
+                <div id="answer-section" style="display:none; margin-top:20px;">
+                    <h2 style="color:var(--primary); margin:10px 0;">${studyCard.word}</h2>
+                    ${etymHtml}
+                    <div class="sentence">${studyCard.sentence}</div>
+                    <button class="btn-primary" onclick="rateCard('good')" style="width:100%; margin-top:10px;">下一題 ➔</button>
+                </div>`;
+            setTimeout(()=>document.getElementById('user-input').focus(), 100);
+            playAudio(studyCard.word);
         }
-        const etymologyHtml = etymContent ? `<div class="etymology-box"><b>${t.etymology_label}:</b> ${etymContent}</div>` : '';
-        const retryHtml = isRetryMode ? `<div class="retry-tag">${t.retry_tag}</div>` : '';
-
-        display.innerHTML = `
-            ${retryHtml}
-            <div style="font-size:0.9em; color:#999; margin-bottom:10px;">${t.hint_listening}</div>
-            <button class="audio-btn" id="btn-play-audio" onclick="playAudio('${studyCard.word}')">🔊</button>
-            <div class="chinese-meaning">${studyCard.meaning}</div>
-            <div class="sentence">${maskedSentence}</div>
-            <div class="input-area"><input type="text" id="user-input" placeholder="..." autocomplete="off" onkeydown="if(event.key==='Enter') checkAnswer()"></div>
-            <button class="btn-primary" id="check-btn" onclick="checkAnswer()" style="margin-top:15px; width:100%;">${t.submit_ans}</button>
-            <div id="answer-section" style="display:none; margin-top:20px; border-top:1px solid #eee; padding-top:20px; animation: fadeIn 0.5s;">
-                <div style="font-size:2em; font-weight:800; color:var(--primary); margin-bottom:5px;">${studyCard.word}</div>
-                ${etymologyHtml}
-                <div class="rating-btns">
-                    <button class="btn-hard" onclick="rateCard('hard')">${t.rate_hard}</button>
-                    <button class="btn-good" onclick="rateCard('good')">${t.rate_good}</button>
-                    <button class="btn-easy" onclick="rateCard('easy')">${t.rate_easy}</button>
-                </div>
-            </div>
-        `;
-        setTimeout(() => document.getElementById('user-input').focus(), 100);
+        // Mode: SPEAK
+        else if (currentMode === 'speak') {
+            display.innerHTML = `${retryHtml}<div class="chinese-meaning" style="margin-bottom:10px;">${studyCard.meaning}</div><h3 style="color:var(--text-light); margin-bottom:30px;">${studyCard.word}</h3><div class="mic-container"><div class="mic-btn" id="mic-btn" onclick="toggleSpeech()">🎤</div><div class="mic-ring"></div></div><div style="font-size:0.9em; color:#999;" id="speak-status">Tap mic to speak</div><div class="score-box" id="speak-result"><div id="speak-feedback-title" style="font-weight:bold; font-size:1.2em; margin-bottom:5px;"></div><div style="font-size:0.9em; color:#666;">你唸成: <span id="speak-heard" style="font-weight:bold; color:var(--text);"></span></div><div class="score-bar-bg"><div class="score-bar-fill" id="speak-score-bar"></div></div><div id="speak-advice" style="font-size:0.85em; color:#888; margin-bottom:10px;"></div><div style="display:flex; gap:10px;"><button class="btn-danger" onclick="rateCard('hard')" style="flex:1;">重試</button><button class="btn-success" onclick="rateCard('easy')" style="flex:1;">通過</button></div></div>`;
+        }
     }
 
+    // --- Speech Logic ---
+    function toggleSpeech() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) { alert("瀏覽器不支援語音辨識 (建議使用 Chrome)"); return; }
+        if (recognition && recognition.started) { recognition.stop(); return; }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition(); recognition.lang = 'en-US'; recognition.interimResults = false; recognition.maxAlternatives = 1;
+        const btn = document.getElementById('mic-btn'); const status = document.getElementById('speak-status');
+        recognition.onstart = () => { recognition.started = true; btn.classList.add('listening'); status.innerText = "Listening..."; };
+        recognition.onend = () => { recognition.started = false; btn.classList.remove('listening'); status.innerText = "Processing..."; };
+        recognition.onresult = (event) => { const transcript = event.results[0][0].transcript.toLowerCase(); evaluatePronunciation(transcript); };
+        recognition.start();
+    }
+    function evaluatePronunciation(heardText) {
+        const target = studyCard.word.toLowerCase(); heardText = heardText.trim().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+        const similarity = similarityRatio(target, heardText); const score = Math.round(similarity * 100);
+        const resultBox = document.getElementById('speak-result'); const title = document.getElementById('speak-feedback-title'); const heardEl = document.getElementById('speak-heard'); const bar = document.getElementById('speak-score-bar'); const advice = document.getElementById('speak-advice');
+        resultBox.style.display = 'block'; heardEl.innerText = heardText; bar.style.width = score + '%';
+        if (score >= 100) { title.innerText = "🌟 Excellent! (100%)"; title.style.color = "var(--success)"; advice.innerText = "完美發音！Native speaker level!"; comboCount++; triggerCombo(comboCount); } 
+        else if (score >= 80) { title.innerText = "👍 Good Job! (" + score + "%)"; title.style.color = "var(--primary)"; advice.innerText = "發音很標準，繼續保持！"; } 
+        else if (score >= 50) { title.innerText = "🤔 Almost... (" + score + "%)"; title.style.color = "var(--warning)"; advice.innerText = `有些音節不太清楚，試著再唸一次 "${studyCard.word}"。`; } 
+        else { title.innerText = "💪 Keep Trying (" + score + "%)"; title.style.color = "var(--danger)"; advice.innerText = "沒抓到重點，再試一次？"; }
+    }
+    function similarityRatio(s1, s2) {
+        let longer = s1; let shorter = s2; if (s1.length < s2.length) { longer = s2; shorter = s1; } const longerLength = longer.length; if (longerLength === 0) return 1.0;
+        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+    }
+    function editDistance(s1, s2) {
+        s1 = s1.toLowerCase(); s2 = s2.toLowerCase(); const costs = new Array(); for (let i = 0; i <= s1.length; i++) { let lastValue = i; for (let j = 0; j <= s2.length; j++) { if (i == 0) costs[j] = j; else { if (j > 0) { let newValue = costs[j - 1]; if (s1.charAt(i - 1) != s2.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1; costs[j - 1] = lastValue; lastValue = newValue; } } } if (i > 0) costs[s2.length] = lastValue; } return costs[s2.length];
+    }
+
+    function revealAnswer() { 
+        // FIX: TARGET SPECIFIC ID to avoid hiding the AI button
+        const btn = document.getElementById('btn-reveal-answer');
+        if(btn) btn.style.display = 'none'; 
+        
+        document.getElementById('answer-section').style.display = 'block'; 
+        const audioBtn = document.getElementById('flip-audio-btn');
+        if(audioBtn) audioBtn.style.display = 'flex';
+        
+        document.getElementById('sentence-display').innerHTML = studyCard.sentence.replace(new RegExp(studyCard.word, 'gi'), `<b>${studyCard.word}</b>`); 
+        playAudio(studyCard.word); 
+    }
     function checkAnswer() {
-        const input = document.getElementById('user-input');
-        const val = input.value.trim().toLowerCase();
-        if (val === studyCard.word.toLowerCase()) {
-            input.classList.add('correct'); playAudio(studyCard.word);
-        } else {
-            input.classList.add('wrong');
-            if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard);
-        }
-        input.disabled = true;
-        document.getElementById('check-btn').style.display = 'none';
-        document.getElementById('answer-section').style.display = 'block';
+        const input = document.getElementById('user-input'); const val = input.value.trim().toLowerCase();
+        if (val === studyCard.word.toLowerCase()) { input.classList.add('correct'); comboCount++; triggerCombo(comboCount); playAudio(studyCard.word); } 
+        else { input.classList.add('wrong'); comboCount = 0; if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard); }
+        input.disabled = true; document.getElementById('check-btn').style.display = 'none'; document.getElementById('answer-section').style.display = 'block';
     }
 
+    // --- SM-2 Core ---
     function rateCard(rating) {
-        const now = Date.now(); const oneDay = 24 * 60 * 60 * 1000;
-        
-        // 讀取自訂倍率 (Use Custom Intervals)
-        const settings = userData.settings || { goodMult: 2, easyMult: 3 };
-
-        if (rating === 'hard') {
-            studyCard.interval = 0;
-            if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard);
-            if (retryQueue.length > 1) retryQueue.push(retryQueue.shift()); 
-        } else {
-            if (isRetryMode) retryQueue = retryQueue.filter(c => c.id !== studyCard.id);
-            let interval = studyCard.interval || 0;
-            
-            if (rating === 'good') {
-                // 如果是新卡 (0)，設為 1 天，否則 * 倍率
-                interval = interval === 0 ? 1 : Math.round(interval * settings.goodMult * 10) / 10;
-                studyCard.interval = interval; 
-                studyCard.nextReview = now + (interval * oneDay);
-            } else if (rating === 'easy') {
-                interval = interval === 0 ? 3 : Math.round(interval * settings.easyMult * 10) / 10;
-                studyCard.interval = interval; 
-                studyCard.nextReview = now + (interval * oneDay);
-            }
+        const now = Date.now(); const s = userData.settings; const currentMode = s.studyMode || 'flip'; const stats = getCardStats(studyCard, currentMode);
+        let q = 0;
+        if (rating === 'hard') { q = 0; stats.repetitions = 0; stats.interval = 1; comboCount = 0; if (!retryQueue.find(c => c.id === studyCard.id)) retryQueue.push(studyCard); if (retryQueue.length > 1) retryQueue.push(retryQueue.shift()); stats.nextReview = now; } 
+        else {
+            if (rating === 'good') q = 4; if (rating === 'easy') q = 5;
+            if (stats.repetitions === 0) stats.interval = s.sm2_n1; else if (stats.repetitions === 1) stats.interval = s.sm2_n2; else stats.interval = Math.round(stats.interval * stats.efactor);
+            stats.repetitions += 1; stats.efactor = stats.efactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)); 
+            if (stats.efactor < s.sm2_min_ef) stats.efactor = s.sm2_min_ef; 
+            stats.nextReview = now + (stats.interval * 86400000);
         }
         saveUserData(); renderStudy();
     }
 
-    async function generateCards() {
-        const key = document.getElementById('api-key').value.trim();
-        const text = document.getElementById('words-input').value.trim();
-        const loading = document.getElementById('loading-msg');
-        if (!key || !text) return alert('API Key & Words required');
-        
-        userData.apiKey = key; saveUserData(); loading.style.display = 'block';
-        const prompt = `You are an expert etymologist. Create a JSON array for these words: "${text}". Each object must have: 1. "word" (lowercase). 2. "meaning" (Traditional Chinese concise). 3. "sentence" (B1 level example sentence). 4. "etymology": An object with two keys "en" and "zh" explaining roots/prefix/suffix. Return ONLY raw JSON. No markdown.`;
-        try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-            const data = await response.json();
-            let jsonStr = data.candidates[0].content.parts[0].text;
-            jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-            const newCards = JSON.parse(jsonStr);
-            newCards.forEach(c => {
-                userData.groups[currentGroup].push({
-                    id: Date.now() + Math.random(), word: c.word, meaning: c.meaning, sentence: c.sentence, etymology: c.etymology, nextReview: Date.now(), interval: 0
-                });
-            });
-            saveUserData(); alert(`Added ${newCards.length} cards!`);
-            document.getElementById('words-input').value = ''; toggleMode(); renderStudy();
-        } catch (e) { alert('Error: ' + e.message); } finally { loading.style.display = 'none'; }
+    // --- 5. Gemini API ---
+    async function fetchGemini(key, payload, model) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await resp.json(); if (data.error) throw new Error(data.error.message); return data;
     }
-
-    function playAudio(word) {
-        const btn = document.getElementById('btn-play-audio');
-        if(btn) btn.classList.add('playing');
-        const url = `https://ssl.gstatic.com/dictionary/static/sounds/oxford/${word.toLowerCase()}--_us_1.mp3`;
-        const audio = new Audio(url);
-        audio.onended = () => { if(btn) btn.classList.remove('playing'); };
-        audio.onerror = () => {
-            const u = new SpeechSynthesisUtterance(word); u.lang = 'en-US'; window.speechSynthesis.speak(u);
-            if(btn) btn.classList.remove('playing');
-        };
-        audio.play().catch(() => audio.onerror());
+    function triggerImageUpload() { document.getElementById('img-input').click(); }
+    function handleImageSelect(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader(); reader.onloadend = () => { currentImageBase64 = reader.result.split(',')[1]; document.getElementById('img-preview').src = reader.result; document.getElementById('img-preview-container').style.display = 'block'; document.getElementById('btn-upload-img').innerText = "✅ 圖片已選取"; }; reader.readAsDataURL(file);
     }
-
-    function saveUserData() { if (currentUser) localStorage.setItem(`anki-data-${currentUser}`, JSON.stringify(userData)); }
-    function switchView(id) { document.querySelectorAll('.view').forEach(v => v.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-    function toggleMode() {
-        const studyDiv = document.getElementById('mode-study'); const addDiv = document.getElementById('mode-add');
-        if (studyDiv.style.display !== 'none') { studyDiv.style.display = 'none'; addDiv.style.display = 'block'; }
-        else { studyDiv.style.display = 'block'; addDiv.style.display = 'none'; renderStudy(); }
-        updateLanguage();
-    }
+    function clearImage() { currentImageBase64 = null; document.getElementById('img-input').value = ''; document.getElementById('img-preview-container').style.display = 'none'; document.getElementById('btn-upload-img').innerText = "📸 拍照 / 掃描單字"; }
     
-    // --- Modal Logic Updated for Settings ---
+    async function generateCards() {
+        const key = document.getElementById('api-key').value.trim() || userData.apiKey; const text = document.getElementById('words-input').value.trim(); const loading = document.getElementById('loading-msg');
+        if (!key) return alert('請輸入 API Key'); if (!text && !currentImageBase64) return alert('請輸入文字或上傳圖片');
+        userData.apiKey = key; saveUserData(); loading.style.display = 'block';
+        const systemPrompt = `You are a vocabulary assistant. Analyze the input text or image. Extract English vocabulary words. Output STRICT JSON ONLY. Format: [ { "word": "english word", "meaning": "Traditional Chinese meaning", "sentence": "A simple English example sentence (B1 level)", "etymology": "A short explanation of origin/memory aid in Traditional Chinese" } ]`;
+        let contentsPart = [{ text: systemPrompt + `\n\nInput: ${text ? text : "Extract from attached image"}` }];
+        if (currentImageBase64) contentsPart.push({ inline_data: { mime_type: "image/jpeg", data: currentImageBase64 } });
+        try {
+            const data = await fetchGemini(key, { contents: [{ parts: contentsPart }] }, 'gemini-2.5-flash');
+            let jsonStr = data.candidates[0].content.parts[0].text; jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '');
+            const start = jsonStr.indexOf('['); const end = jsonStr.lastIndexOf(']'); if (start !== -1 && end !== -1) jsonStr = jsonStr.substring(start, end + 1);
+            try { tempGeneratedCards = JSON.parse(jsonStr); switchView('view-review'); renderReviewList(); } catch (e) { throw new Error("AI 回傳格式錯誤，請再試一次。"); }
+            loading.style.display = 'none';
+        } catch (e) { alert('AI Error: ' + e.message); loading.style.display = 'none'; }
+    }
+    function renderReviewList() {
+        const list = document.getElementById('review-list'); list.innerHTML = '';
+        tempGeneratedCards.forEach((card, index) => {
+            const div = document.createElement('div'); div.style.cssText = "background:#f8f9fa; padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid #eee; position:relative;";
+            div.innerHTML = `<div style="position:absolute; right:10px; top:10px; color:#ff7675; cursor:pointer; font-weight:bold;" onclick="tempGeneratedCards.splice(${index},1);renderReviewList()">✕</div><label style="font-size:0.8em; color:#888;">單字</label><input type="text" value="${card.word}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:5px; margin-bottom:5px;" onchange="tempGeneratedCards[${index}].word=this.value"><label style="font-size:0.8em; color:#888;">釋義</label><input type="text" value="${card.meaning}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:5px;" onchange="tempGeneratedCards[${index}].meaning=this.value">`;
+            list.appendChild(div);
+        });
+    }
+    function cancelReview() { 
+        tempGeneratedCards = []; 
+        switchView('view-workspace'); 
+        resetModeBtn();
+        document.getElementById('mode-study').style.display = 'block'; 
+        document.getElementById('mode-add').style.display = 'none'; 
+        renderStudy();
+    }
+    function confirmImport() {
+        if (!userData.groups[currentGroup]) userData.groups[currentGroup] = [];
+        tempGeneratedCards.forEach(c => { c.id = Date.now() + Math.random(); userData.groups[currentGroup].push(c); });
+        saveUserData(); alert(`成功匯入 ${tempGeneratedCards.length} 個單字!`); tempGeneratedCards = []; document.getElementById('words-input').value = ''; clearImage();
+        
+        document.getElementById('mode-study').style.display = 'block'; 
+        document.getElementById('mode-add').style.display = 'none'; 
+        resetModeBtn();
+        renderStudy(); 
+        switchView('view-workspace');
+    }
+
+    // --- 6. Manager ---
+    function openManager() { renderManagerList(); switchView('view-manage'); }
+    function backToStudy() { switchView('view-workspace'); renderStudy(); }
+    function renderManagerList() {
+        const list = document.getElementById('manage-list'); list.innerHTML = ''; const cards = userData.groups[currentGroup] || [];
+        if (cards.length === 0) { list.innerHTML = '<p style="text-align:center;color:#999;">沒有單字</p>'; return; }
+        cards.forEach((card, index) => {
+            const div = document.createElement('div'); div.style.cssText = "background:#fff; padding:15px; border-radius:12px; margin-bottom:10px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;";
+            div.innerHTML = `<div><strong style="font-size:1.1em; color:var(--primary);">${card.word}</strong><div style="color:#555;">${card.meaning}</div></div><div style="display:flex; flex-direction:column; gap:5px;"><button class="btn-outline" style="padding:4px 8px; font-size:0.8em;" onclick="editCard(${index})">✎</button><button class="btn-danger" style="padding:4px 8px;" onclick="deleteCard(${index})">✕</button></div>`;
+            list.appendChild(div);
+        });
+    }
+    function deleteCard(i) { if(confirm('確定刪除?')) { userData.groups[currentGroup].splice(i, 1); saveUserData(); renderManagerList(); } }
+    function editCard(i) { const c = userData.groups[currentGroup][i]; const w = prompt("修改單字:", c.word); if(w) { c.word = w; saveUserData(); renderManagerList(); } }
+
+    // --- 7. Online Battle ---
+    function setupHostGame(e, gn) { e.stopPropagation(); currentGroup = gn; const g = userData.groups[gn]; if (!g || g.length < 1) return alert('群組是空的'); isHost = true; switchView('view-host-lobby'); initPeer(true); }
+    function openJoinLobby() { isHost = false; switchView('view-join-lobby'); }
+    
+    function initPeer(asHost) {
+        const statusEl = isHost ? document.getElementById('host-status') : document.getElementById('join-status');
+        statusEl.innerText = "正在連接 Peer 網路...";
+        let myPeerId = null;
+        if (asHost) {
+            const simpleCode = Math.floor(100000 + Math.random() * 900000);
+            mySimpleId = simpleCode.toString();
+            myPeerId = 'anki-battle-' + mySimpleId;
+            document.getElementById('host-id-display').innerText = mySimpleId;
+        }
+        if (peer) peer.destroy();
+        peer = new Peer(myPeerId);
+        peer.on('open', (id) => {
+            statusEl.innerText = "伺服器連接成功! (ID: " + id + ")";
+            if (!asHost) document.getElementById('btn-connect').disabled = false;
+        });
+        peer.on('connection', (c) => {
+            if (isHost) {
+                conn = c;
+                setupConnection();
+                document.getElementById('host-status').innerText = "已連接!";
+                document.getElementById('host-actions').style.display = 'block';
+            }
+        });
+        peer.on('error', (err) => { alert("連線錯誤: " + err.type); statusEl.innerText = "連線失敗，請重試"; });
+    }
+
+    function copyHostId() { navigator.clipboard.writeText(mySimpleId).then(() => alert('號碼已複製: ' + mySimpleId)); }
+
+    function joinGame() {
+        const input = document.getElementById('join-id-input');
+        const code = input.value.trim();
+        if (code.length < 6) return alert("請輸入 6 位數號碼");
+        const targetPeerId = 'anki-battle-' + code;
+        document.getElementById('join-status').innerText = "正在連線到房間 " + code + "...";
+        if (!peer || peer.destroyed) {
+            initPeer(false);
+            peer.on('open', () => { conn = peer.connect(targetPeerId); setupConnection(); });
+        } else { conn = peer.connect(targetPeerId); setupConnection(); }
+    }
+
+    function setupConnection() {
+        conn.on('open', () => {
+            if (!isHost) {
+                document.getElementById('join-status').innerText = "成功加入! 等待房主開始...";
+                document.getElementById('btn-connect').style.display = 'none';
+            }
+        });
+        conn.on('data', (data) => {
+            if (data.type === 'START_GAME') { battleDeck = data.deck; startGamePlay(); }
+            else if (data.type === 'HIT') { myHp -= 20; updateHealthBars(); if (myHp <= 0) { conn.send({ type: 'GAME_OVER', winner: 'OPPONENT' }); endOnlineGame(false); } }
+            else if (data.type === 'GAME_OVER') { endOnlineGame(true); }
+        });
+    }
+
+    function hostStartGame() { battleDeck = [...userData.groups[currentGroup]].sort(()=>0.5-Math.random()).slice(0, 10); conn.send({ type: 'START_GAME', deck: battleDeck }); startGamePlay(); }
+    function startGamePlay() { battleIndex = 0; myHp = 100; opHp = 100; comboCount = 0; updateHealthBars(); switchView('view-online-battle'); document.getElementById('battle-result-area').style.display = 'none'; document.getElementById('battle-game-area').style.display = 'block'; nextBattleRound(); }
+    function updateHealthBars() { const myBar = document.getElementById('my-hp-bar'); const opBar = document.getElementById('op-hp-bar'); myBar.style.width = myHp + '%'; opBar.style.width = opHp + '%'; if(myHp < 30) myBar.classList.add('danger'); else myBar.classList.remove('danger'); if(opHp < 30) opBar.classList.add('danger'); else opBar.classList.remove('danger'); }
+    function nextBattleRound() { if (battleIndex >= battleDeck.length) battleIndex = 0; const card = battleDeck[battleIndex]; document.getElementById('battle-meaning').innerText = card.meaning; const input = document.getElementById('battle-input'); input.value = ''; input.disabled = false; input.focus(); document.getElementById('battle-feedback').innerText = ''; }
+    function checkBattleAnswer() {
+        const input = document.getElementById('battle-input'); const val = input.value.trim().toLowerCase(); const card = battleDeck[battleIndex];
+        if (val === card.word.toLowerCase()) { opHp -= 20; updateHealthBars(); comboCount++; triggerCombo(comboCount); document.getElementById('battle-feedback').innerText = "HIT!"; document.getElementById('battle-feedback').style.color = "var(--success)"; conn.send({ type: 'HIT' }); if (opHp <= 0) { endOnlineGame(true); } else { battleIndex++; setTimeout(nextBattleRound, 500); } } 
+        else { document.getElementById('battle-feedback').innerText = "MISS!"; document.getElementById('battle-feedback').style.color = "var(--danger)"; input.value = ''; input.classList.add('wrong'); comboCount = 0; setTimeout(()=>input.classList.remove('wrong'), 500); }
+    }
+    function endOnlineGame(win) { document.getElementById('battle-game-area').style.display = 'none'; document.getElementById('battle-result-area').style.display = 'block'; const title = document.getElementById('battle-final-title'); if (win) { title.innerText = "🏆 YOU WIN!"; title.style.color = "var(--warning)"; fireConfetti(); } else { title.innerText = "💀 YOU LOSE..."; title.style.color = "#636e72"; } }
+    function quitOnlineGame() { if(conn) conn.close(); goDashboard(); }
+
+    // --- 8. Utils & Modal ---
+    function triggerImport() { document.getElementById('file-import').click(); }
+    function handleImport(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try { const imported = JSON.parse(e.target.result); Object.keys(imported.groups).forEach(k => { if (!userData.groups[k]) userData.groups[k] = []; userData.groups[k] = [...userData.groups[k], ...imported.groups[k]]; }); saveUserData(); renderDashboard(); alert('匯入成功！'); } catch (err) { alert('格式錯誤'); }
+        }; reader.readAsText(file);
+    }
+    function exportDeck(e, name) { e.stopPropagation(); const data = { groups: {} }; data.groups[name] = userData.groups[name]; const blob = new Blob([JSON.stringify(data)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `anki_${name}.json`; a.click(); }
+    function deleteGroup(e, name) { e.stopPropagation(); if (confirm(`刪除群組 ${name}?`)) { delete userData.groups[name]; saveUserData(); renderDashboard(); } }
+    function sendGmailReminder() { const subject = "Anki Flashcards Reminder"; const body = "Remember to study your flashcards today!"; window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`); }
+    function playAudio(w) { if (!w) return; const audioUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(w)}&type=2`; const audio = new Audio(audioUrl); const p = audio.play(); if (p !== undefined) { p.catch((e) => { speakFallback(w); }); } }
+    function speakFallback(text) { if (!('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = 0.9; const voices = window.speechSynthesis.getVoices(); const enVoice = voices.find(v => v.name.includes('Google US')) || voices.find(v => v.lang.includes('en-US')); if (enVoice) u.voice = enVoice; window.speechSynthesis.speak(u); }
+    
     function showModal(type) {
-        modalType = type; 
-        const modal = document.getElementById('modal-overlay'); 
-        const content = document.getElementById('modal-content');
-        const t = translations[currentLang];
-        
-        modal.style.display = 'flex';
-        
-        if (type === 'user' || type === 'group') {
-            const title = (type === 'user') ? t.add_user : t.new_group_label;
-            content.innerHTML = `
-                <h3 id="modal-title">${title}</h3>
-                <input type="text" id="modal-input" placeholder="" autofocus>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-outline" style="flex:1" onclick="closeModal()">${t.cancel}</button>
-                    <button class="btn-primary" style="flex:1" onclick="confirmModal()">${t.confirm}</button>
-                </div>
-            `;
-            setTimeout(() => document.getElementById('modal-input').focus(), 100);
+        modalType = type; const m = document.getElementById('modal-overlay'); const c = document.getElementById('modal-content'); m.style.display = 'flex';
+        if (type === 'group') {
+            c.innerHTML = `
+                <h3 style="margin-top:0; text-align:center;">新增群組</h3>
+                <input type="text" id="modal-input" autofocus placeholder="輸入名稱..." 
+                    style="width:85%; display:block; margin:0 auto 20px auto; padding:12px; border:2px solid #dfe6e9; border-radius:50px; font-size:1.2em; text-align:center; box-shadow: inset 0 2px 5px rgba(0,0,0,0.03); outline:none;">
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button class="btn-outline" style="flex:1" onclick="closeModal()">取消</button>
+                    <button class="btn-primary" style="flex:1" onclick="submitModal()">建立</button>
+                </div>`;
         } else if (type === 'settings') {
-            // Settings Form
-            const good = userData.settings ? userData.settings.goodMult : 2;
-            const easy = userData.settings ? userData.settings.easyMult : 3;
-            content.innerHTML = `
-                <h3 id="modal-title">${t.settings_title}</h3>
-                <label style="display:block; text-align:left; font-size:0.9em;">${t.label_good} (x${good})</label>
-                <input type="number" id="input-good" value="${good}" step="0.1" min="1.1">
-                
-                <label style="display:block; text-align:left; font-size:0.9em;">${t.label_easy} (x${easy})</label>
-                <input type="number" id="input-easy" value="${easy}" step="0.1" min="1.1">
-                
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-outline" style="flex:1" onclick="closeModal()">${t.cancel}</button>
-                    <button class="btn-primary" style="flex:1" onclick="confirmModal()">${t.confirm}</button>
+            const mode = userData.settings.studyMode;
+            c.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0; color:var(--text);">⚙️ 系統設定</h3>
+                    <div style="font-size:1.2em; cursor:pointer;" onclick="closeModal()">✕</div>
                 </div>
+                <div class="text-left">
+                    <div class="settings-section-title">📖 學習模式</div>
+                    <div class="mode-options">
+                        <label class="mode-opt"><input type="radio" name="mode-select" value="flip" ${mode==='flip'?'checked':''}><div class="mode-label"><span>🎴</span><div>翻卡</div></div></label>
+                        <label class="mode-opt"><input type="radio" name="mode-select" value="spell" ${mode==='spell'?'checked':''}><div class="mode-label"><span>⌨️</span><div>拼字</div></div></label>
+                        <label class="mode-opt"><input type="radio" name="mode-select" value="speak" ${mode==='speak'?'checked':''}><div class="mode-label"><span>🎤</span><div>口說</div></div></label>
+                    </div>
+                    <div class="settings-section-title">🧠 記憶演算法 (SM-2)</div>
+                    <div class="sm2-grid">
+                        <div class="sm2-item"><label>初次間隔 (天)</label><input type="number" id="set-n1" value="${userData.settings.sm2_n1}" min="0.1" step="0.1"></div>
+                        <div class="sm2-item"><label>二次間隔 (天)</label><input type="number" id="set-n2" value="${userData.settings.sm2_n2}" min="1"></div>
+                        <div class="sm2-item"><label>初始輕鬆度 (EF)</label><input type="number" id="set-ef" value="${userData.settings.sm2_start_ef}" step="0.1"></div>
+                        <div class="sm2-item"><label>最小輕鬆度 (EF)</label><input type="number" id="set-min-ef" value="${userData.settings.sm2_min_ef}" step="0.1"></div>
+                    </div>
+                </div>
+                <button class="btn-primary" style="width:100%; margin-top:20px; font-size:1.1em;" onclick="saveSettings()">💾 儲存設定</button>
             `;
         }
+    }
+    function saveSettings() {
+        const radios = document.getElementsByName('mode-select'); let selectedMode = 'flip'; for (const r of radios) { if(r.checked) selectedMode = r.value; }
+        userData.settings.studyMode = selectedMode;
+        userData.settings.sm2_n1 = parseFloat(document.getElementById('set-n1').value);
+        userData.settings.sm2_n2 = parseFloat(document.getElementById('set-n2').value);
+        userData.settings.sm2_start_ef = parseFloat(document.getElementById('set-ef').value);
+        userData.settings.sm2_min_ef = parseFloat(document.getElementById('set-min-ef').value);
+        saveUserData(); closeModal(); renderDashboard(); 
     }
     function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-    function confirmModal() {
-        if (modalType === 'settings') {
-            const good = parseFloat(document.getElementById('input-good').value);
-            const easy = parseFloat(document.getElementById('input-easy').value);
-            if(good && easy) {
-                userData.settings = { goodMult: good, easyMult: easy };
-                saveUserData();
-                closeModal();
-            }
-            return;
-        }
-        
-        const val = document.getElementById('modal-input').value.trim();
-        if (!val) return;
-        if (modalType === 'user') {
-            if (!users.includes(val)) {
-                users.push(val); localStorage.setItem('anki-users-list', JSON.stringify(users));
-                localStorage.setItem(`anki-data-${val}`, JSON.stringify({ apiKey: '', groups: {}, streak: 0, streakGoal: 7, settings: {goodMult:2, easyMult:3} })); initLogin();
-            } else { alert('User exists'); }
-        } else if (modalType === 'group') {
-            if (!userData.groups[val]) { userData.groups[val] = []; saveUserData(); renderDashboard(); } else { alert('Group exists'); }
-        }
+    function submitModal() {
+        if (modalType === 'group') { const v = document.getElementById('modal-input').value.trim(); if (!v) return; if (!userData.groups[v]) { userData.groups[v] = []; saveUserData(); renderDashboard(); } else { alert('名稱已存在'); } }
         closeModal();
     }
-    initLogin();
+    function closeCelebration() { document.getElementById('celebration-overlay').style.display = 'none'; }
+    function fireConfetti() { const c = document.getElementById('confetti-canvas'); const x = c.getContext('2d'); c.width = window.innerWidth; c.height = window.innerHeight; const p = []; const cl = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f']; for(let i=0; i<300; i++) p.push({x: Math.random()*c.width, y: Math.random()*c.height-c.height, w: Math.random()*10+5, h: Math.random()*10+5, c: cl[Math.floor(Math.random()*cl.length)], d: Math.random()*5+2, a: Math.random()*Math.PI*2}); function d() { x.clearRect(0,0,c.width,c.height); p.forEach(e=>{ x.save(); x.translate(e.x,e.y); x.rotate(e.a); x.fillStyle=e.c; x.fillRect(-e.w/2,-e.h/2,e.w,e.h); x.restore(); e.y+=e.d; e.a+=0.1; if(e.y>c.height) e.y=-10; }); requestAnimationFrame(d); } d(); }
+
+    initApp();
 </script>
 </body>
 </html>
